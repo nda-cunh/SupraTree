@@ -58,7 +58,7 @@ export class SupraTreeBuffer
 
 		map <buffer> <cr>			<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
 		map <buffer> <c-t>			<scriptcmd>b:supra_tree.OnClick(Toggle.NewTab)<cr>
-		map <buffer> <c-s>			<scriptcmd>b:supra_tree.OnClick(Toggle.Split)<cr>
+		map <buffer> <c-h>			<scriptcmd>b:supra_tree.OnClick(Toggle.Split)<cr>
 		map <buffer> <c-v>			<scriptcmd>b:supra_tree.OnClick(Toggle.VSplit)<cr>
 		map <buffer> <2-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
 		map <buffer> <3-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
@@ -183,7 +183,6 @@ export class SupraTreeBuffer
 			if len(new_name) == 0 || new_name == fnamemodify(full_path, ':t')
 				return
 			endif
-			echom "Renaming to: " .. new_name
 			const new_path = fnamemodify(full_path, ':h') .. '/' .. new_name
 			rename(full_path, new_path)
 			this.RefreshKeepPos()
@@ -201,7 +200,7 @@ export class SupraTreeBuffer
 	def OnClick(type: Toggle.Type)
 		const lnum = line('.')
 		const full_path = this.table_prefix[lnum - 1]
-		if isdirectory(full_path)
+		if isdirectory(full_path) && type == Toggle.Enter
 			if index(this.open_folders, full_path) != -1
 				# close folder
 				const idx = index(this.open_folders, full_path)
