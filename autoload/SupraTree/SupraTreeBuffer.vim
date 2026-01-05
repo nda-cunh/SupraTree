@@ -52,7 +52,7 @@ export class SupraTreeBuffer
 		setbufvar(buf, '&winfixwidth', 1)
 		setbufvar(buf, '&cursorline', 1)
 		setbufvar(buf, '&winminwidth', 10)
-		setbufvar(buf, '&wincolor', 'NormalDark')
+		setbufvar(buf, '&wincolor', 'TreeNormalDark')
 		setbufvar(buf, '&filetype', 'SupraTree')
 
 
@@ -69,12 +69,12 @@ export class SupraTreeBuffer
 		map <buffer> i				<scriptcmd>b:supra_tree.OnRename()<cr>
 		map <buffer> O 				<scriptcmd>b:supra_tree.OnNewFile(true)<cr>
 		map <buffer> o 				<scriptcmd>b:supra_tree.OnNewFile(false)<cr>
+		# map <buffer> p				<scriptcmd>b:supra_tree.Paste()<cr>
 
-		au BufWriteCmd <buffer>		if exists('b:supra_tree')	| b:supra_tree.SaveActions() | endif | quit
+		au BufWriteCmd <buffer>		if exists('b:supra_tree')	| b:supra_tree.SaveActions() | endif
 		au BufWipeout <buffer>		SupraTreeBuffer.Quit()	
 
 		this.actions = Actions.new()
-		# Add a match for deleted files
 		this.buf = buf
 		this.Refresh()
 	enddef
@@ -91,7 +91,7 @@ export class SupraTreeBuffer
 	def SaveActions() 
 		# Save the actions to a file or variable
 		this.actions.MakeActions()
-		# echom "SupraTree: Actions saved."
+		echom "SupraTree: Actions saved."
 	enddef
 
 
@@ -380,13 +380,21 @@ export class SupraTreeBuffer
 
 			if isdirectory(full_path)
 				if index(this.open_folders, full_path) != -1
-					this.AddLine(prefix .. ' ' .. this.GetIcons('', 2) .. ' ' .. name, full_path)
+					if is_deleted == true
+						this.AddLine(prefix .. ' ' .. this.GetIcons('', 3) .. ' ' .. name, full_path)
+					else
+						this.AddLine(prefix .. ' ' .. this.GetIcons('', 2) .. ' ' .. name, full_path)
+					endif
 					if is_deleted == true
 						call prop_add(this.lnum - 1, 1, {type: 'SupraTreeDeletedProp', length: len(getline(this.lnum - 1)), bufnr: this.buf})
 					endif
 					this.RecursiveDraw(full_path, depth + 1)
 				else
-					this.AddLine(prefix .. ' ' .. this.GetIcons('', 1) .. ' ' .. name, full_path)
+					if is_deleted == true
+						this.AddLine(prefix .. ' ' .. this.GetIcons('', 3) .. ' ' .. name, full_path)
+					else
+						this.AddLine(prefix .. ' ' .. this.GetIcons('', 1) .. ' ' .. name, full_path)
+					endif
 					if is_deleted == true
 						call prop_add(this.lnum - 1, 1, {type: 'SupraTreeDeletedProp', length: len(getline(this.lnum - 1)), bufnr: this.buf})
 					endif
