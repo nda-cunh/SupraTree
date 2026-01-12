@@ -1,0 +1,53 @@
+vim9script
+
+import autoload './Node.vim' as Node
+import autoload './NodeType.vim' as NodeType
+import autoload './Toggle.vim' as Toggle
+import autoload './Utils.vim' as Utils 
+
+export class FileNode extends Node.Node
+	def new(this.parent, this.name, this.type, this.depth)
+	enddef
+	
+	def Draw(is_end: bool = false)
+		const singleton: any = g:supra_tree 
+		const prefix = Utils.GetPrefixLine(this.depth)
+		const full_path = this.parent .. '/' .. this.name
+		var icon: string
+		if this.type == NodeType.Deleted
+			icon = Utils.GetIcons('', 3)
+		else
+			icon = Utils.GetIcons(full_path)
+		endif
+
+		if this.depth == 0
+			singleton.NewAddLine(prefix .. '  ' .. icon .. ' ' .. this.name, this)
+		else
+			const line = '' .. prefix .. (this.is_last ? '╰ ' : '│ ') .. icon .. ' ' .. this.name
+			singleton.NewAddLine(line, this)
+		endif
+
+		# Adding Properties
+		super.AddPropAttribute()
+	enddef
+
+	def Action(type: Toggle.Type)
+		wincmd p
+		const buf = bufnr('%')
+		const full_path = this.parent .. '/' .. this.name
+		if type == Toggle.Enter
+			if getbufvar(buf, '&modified') == true
+				execute 'split ' .. fnameescape(full_path)
+			else
+				execute 'edit ' .. fnameescape(full_path)
+			endif
+		elseif type == Toggle.Split
+			execute 'split ' .. fnameescape(full_path)
+		elseif type == Toggle.VSplit
+			execute 'vsplit ' .. fnameescape(full_path)
+		elseif type == Toggle.NewTab
+			execute 'tabnew ' .. fnameescape(full_path)
+		endif
+	enddef
+endclass
+

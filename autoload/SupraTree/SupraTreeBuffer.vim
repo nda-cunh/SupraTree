@@ -1,38 +1,35 @@
 vim9script
 
-import autoload 'SupraTree/Actions.vim' as MActions
-import autoload 'SupraTree/Toggle.vim' as Toggle
-import autoload 'SupraTree/Input.vim' as Popup 
+import autoload './Toggle.vim' as Toggle
+import autoload './Input.vim' as Popup
+import autoload './Utils.vim' as Utils
+import autoload './Node.vim' as ANode
+import autoload './SpecialNode.vim' as ASpecialNode
+import autoload './DirectoryNode.vim' as ADirectoryNode
+import autoload './FileNode.vim' as AFileNode
+import autoload './NodeType.vim' as NodeType
 
 type Input = Popup.Input
-type Actions = MActions.Actions
-
-def TestIfIconsWork(): bool
-	try
-		call(g:supratree_icons_glyph_func, ['test.txt'])
-		return true
-	catch
-		return false
-	endtry
-enddef
+type Node = ANode.Node
+type SpecialNode = ASpecialNode.SpecialNode
+type DirectoryNode = ADirectoryNode.DirectoryNode
+type FileNode = AFileNode.FileNode
 
 export class SupraTreeBuffer
 	var buf: number # Buffer number
 	var open_folders = [] # Contains the list of open folders
 	var lnum: number # Current line number to write
-	var table_prefix: list<string> # Contains the full path for each line
-	var actions: Actions # Contains all the actions to be done
-	var icon_work: bool # Test if the icon function work
+	var table_actions: list<Node>
+	var icon_work: bool
 
 	def GetBuf(): number
 		return this.buf
 	enddef
 
-
 	def new()
 		const buf = bufadd('SupraTree')
 		execute 'buffer ' .. buf
-		g:supra_tree = this 
+		g:supra_tree = this
 		b:supra_tree = this
 
 		setbufvar(buf, '&buflisted', 0)
@@ -72,12 +69,15 @@ export class SupraTreeBuffer
 		# map <buffer> p				<scriptcmd>b:supra_tree.Paste()<cr>
 
 		au BufWriteCmd <buffer>		if exists('b:supra_tree')	| b:supra_tree.SaveActions() | endif
-		au BufWipeout <buffer>		SupraTreeBuffer.Quit()	
+		au BufWipeout <buffer>		SupraTreeBuffer.Quit()
 
-		this.actions = Actions.new()
 		this.buf = buf
+		this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
+		this.general_node.Open()
 		this.Refresh()
 	enddef
+
+	var general_node: DirectoryNode
 
 	static def Quit()
 		echoerr "SupraTree: Remove instance ..."
@@ -88,15 +88,13 @@ export class SupraTreeBuffer
 	enddef
 
 
-	def SaveActions() 
-		# Save the actions to a file or variable
-		this.actions.MakeActions()
+	def SaveActions()
 		echom "SupraTree: Actions saved."
 	enddef
 
 
 	def CreatePopup(initial_text: string, title: string): Input
-		const icon = this.GetIcons(initial_text)
+		const icon = Utils.GetIcons(initial_text)
 		var input = Input.new(icon .. ' ', {
 			minwidth: 24,
 			title: title,
@@ -106,7 +104,7 @@ export class SupraTreeBuffer
 		})
 		input.SetInput(initial_text)
 		input.AddCbChanged((key, line) => {
-			const ic = this.GetIcons(line) # preload icon cache
+			const ic = Utils.GetIcons(line) # preload icon cache
 			input.SetPrompt(ic .. ' ')
 		})
 		win_execute(input.popup, 'silent! call(g:supratree_icons_glyph_palette_func, [])')
@@ -114,15 +112,37 @@ export class SupraTreeBuffer
 	enddef
 
 	def OnNewFile(is_up: bool)
-		const lnum = line('.')
-		const full_path = this.table_prefix[lnum - 1]
+		const current_lnum = line('.')
+		const target_lnum = is_up ? current_lnum - 1 : current_lnum
+
+		var index = current_lnum + (is_up == true ? -1 : 0)
+		var test_node: Node = this.table_actions[index - 1]
+		var node_parent: Node
+		if test_node->instanceof(DirectoryNode) == true
+			# if the target is an open directory, we create the new file inside it
+			node_parent = test_node
+		else
+			# else we create the new file in the parent directory
+			node_parent = test_node.GetParent()
+		endif
+		if node_parent->instanceof(SpecialNode)
+			echom "Error: Cannot create a new file here."
+			return
+		endif
+
 		setbufvar(this.buf, '&modifiable', 1)
-		append(lnum, '')
-		cursor(lnum + 1, 1)
+
+		# 3. Insérer la ligne vide
+		# append(n, '') insère APRES la ligne n.
+		# Si on veut insérer TOUT en haut (avant la ligne 1), n doit être 0.
+		append(target_lnum, "")
+
+		# 4. Placer le curseur sur la nouvelle ligne
+		cursor(target_lnum + 1, 1)
 
 		var input = this.CreatePopup('', '󰑕 New File')
 		input.AddCbChanged((key, line) => {
-			setbufline(this.buf, lnum + 1, '  ' .. input.GetPrompt() .. line)
+			setbufline(this.buf, target_lnum + 1, '  ' .. input.GetPrompt() .. line)
 		})
 		input.AddCbQuit(() => {
 			this.RefreshKeepPos()
@@ -130,112 +150,71 @@ export class SupraTreeBuffer
 		input.AddCbEnter((new_name) => {
 			# create the new file with the given name
 			if len(new_name) == 0
+				echom "Error: File name cannot be empty."
 				return
 			endif
-			echom "Creating new file: " .. new_name
-			var new_path: string
-			if isdirectory(full_path)
-				new_path = full_path .. '/' .. new_name
-			else
-				new_path = fnamemodify(full_path, ':h') .. '/' .. new_name
-			endif
-			# if the file already exist, do nothing and print an error
-			if filereadable(new_path) || isdirectory(new_path)
-				echom "Error: File or directory already exists."
-				return
-			endif
-
-			# test if it's a directory creation or a file creation 
+			# test the filename with an regex for invalid characters
+			var is_directory: bool
 			if new_name[-1] == '/'
-				mkdir(new_path, 'p')
-				# open the directory containing the new folder
-				var parent_dir = fnamemodify(new_path[0 : -2], ':h')
-				if index(this.open_folders, parent_dir) == -1
-					this.open_folders->add(parent_dir)
+				# an directory is only word characters but end with / can't
+				# contains more '/' but only at the end
+				if !(new_name[0 : -2] =~# '\v^[a-zA-Z0-9._-]+$')
+					echom "Error: Invalid directory name."
+					return
 				endif
+				is_directory = true
 			else
-				# create the new file
-				call writefile([], new_path)
-				# open the directory containing the new file
-				var parent_dir = fnamemodify(new_path, ':h')
-				if index(this.open_folders, parent_dir) == -1
-					this.open_folders->add(parent_dir)
+				if !(new_name =~# '\v^[a-zA-Z0-9._-]+$')
+					echom "Error: Invalid file name."
+					return
 				endif
+				is_directory = false
 			endif
 
-
-			this.RefreshKeepPos()
-			setbufvar(this.buf, '&modifiable', 0)
-			if new_name[-1] == '/'
-				this.GoToPath(new_path[0 : -2])
+			var new_node: Node
+			var parent_path: string
+			if node_parent->instanceof(DirectoryNode) == true
+				parent_path = node_parent.parent .. '/' .. node_parent.name
 			else
-				this.GoToPath(new_path)
+				parent_path = node_parent.GetParent().parent .. '/' .. node_parent.node_parent.name
 			endif
+
+			if is_directory == true
+				new_node = DirectoryNode.new(parent_path, new_name[0 : -2], NodeType.NewFile, node_parent.depth + 1)
+				# echom "Create new directory: " .. parent_path .. '/' .. new_name[0 : -2]
+			else
+				new_node = FileNode.new(parent_path, new_name, NodeType.NewFile, node_parent.depth + 1)
+				# echom "Create new file: " .. parent_path .. '/' .. new_name
+			endif
+
+			echom "Name: " .. new_node.name .. " Parent: " .. new_node.parent
+			node_parent.AddChild(new_node)
+			this.Refresh()
 			input.Close()
+			this.GoToPath(parent_path .. '/' .. new_name)
 		})
 	enddef
 
 	def OnRename()
-		var line = line('.')
-		const full_path = this.table_prefix[line - 1]
-		var input = this.CreatePopup(fnamemodify(full_path, ':t'), '󰑕 Rename')
-		input.AddCbEnter((new_name) => {
-			if len(new_name) == 0 || new_name == fnamemodify(full_path, ':t')
-				return
-			endif
-			const new_path = fnamemodify(full_path, ':h') .. '/' .. new_name
-			rename(full_path, new_path)
-			this.RefreshKeepPos()
-			this.GoToPath(new_path)
-			input.Close()
-		})
 	enddef
 
 	def OnRemove()
 		const lnum = line('.')
-		this.actions.DeleteAction(lnum, this.table_prefix[lnum - 1])
+		var node = this.table_actions[line('.') - 1]
+		node.SetDeleted()
 		this.RefreshKeepPos()
 	enddef
 
 	def OnClick(type: Toggle.Type)
-		const lnum = line('.')
-		const full_path = this.table_prefix[lnum - 1]
-		if isdirectory(full_path) && type == Toggle.Enter
-			if index(this.open_folders, full_path) != -1
-				# close folder
-				const idx = index(this.open_folders, full_path)
-				this.open_folders->remove(idx)
-			else
-				# open folder
-				this.open_folders->add(full_path)
-			endif
-		else
-			wincmd p
-			# check if the buffer actual is modified
-			const buf = bufnr('%')
-			if type == Toggle.Enter
-				if getbufvar(buf, '&modified') == true
-					execute 'split ' .. fnameescape(full_path)
-				else
-					execute 'edit ' .. fnameescape(full_path)
-				endif
-			elseif type == Toggle.Split
-				execute 'split ' .. fnameescape(full_path)
-			elseif type == Toggle.VSplit
-				execute 'vsplit ' .. fnameescape(full_path)
-			elseif type == Toggle.NewTab
-				execute 'tabnew ' .. fnameescape(full_path)
-			endif
-			return
-		endif
-		this.RefreshKeepPos()
+		const node = this.table_actions[line('.') - 1]
+		node.Action(type)
 	enddef
 
 	def GoToPath(path: string)
 		const total_lines = line('$')
 		var lnum = 1
 		while lnum <= total_lines
-			const line_path = this.table_prefix[lnum - 1]
+			const line_path = this.table_actions[lnum - 1].GetFullPath()
 			if line_path == path
 				cursor(lnum, 1)
 				return
@@ -257,33 +236,37 @@ export class SupraTreeBuffer
 		# clear the buffer
 		call setbufline(this.buf, 1, [])
 		call deletebufline(this.buf, 1, '$')
-		const pwd = getcwd()
-		this.Draw(pwd)
-		this.RecursiveDraw(pwd, 0)
+		this.DrawHeader(getcwd())
+		this.DrawNodesList()
 		# test if the function exist
 		if exists('g:supratree_icons_glyph_palette_func')
 			silent! call(g:supratree_icons_glyph_palette_func, [])
 		endif
-		setbufvar(this.buf, '&modifiable', 0)
 		setbufvar(this.buf, '&modified', 0)
+		setbufvar(this.buf, '&modifiable', 0)
 	enddef
 
 
 	# draw the tree header
-	def Draw(pwd: string)
-		this.icon_work = TestIfIconsWork()
-		this.table_prefix = ['', '', '', '', '']
-		# setbufline(this.buf, 1, '     󰥨 SupraTree')
-		# draw the default folder path change $HOME to ~
+	def DrawHeader(pwd: string)
+		this.icon_work = Utils.TestIfIconsWork()
 		var path = substitute(pwd, '^' .. $HOME, '~', '')
 		this.lnum = 1
-		var name = fnamemodify(pwd, ':t')
+		this.table_actions = []
 		setbufline(this.buf, 1, path .. '/')
-		this.AddLine(path .. '/', '@SupraTree@ChangePath')
-		this.AddLine('', '@SupraTree@null')
-		this.AddLine(this.GetIcons('', 2) .. ' ../', '@SupraTree@prev')
+
+		# use too NewAddLine to add Node objects
+		this.NewAddLine(path .. '/', SpecialNode.new('ChangePath'))
+		this.NewAddLine('', SpecialNode.new('null'))
+		this.NewAddLine(Utils.GetIcons('', 2) .. ' ../', SpecialNode.new('prev'))
 	enddef
 
+
+	def NewAddLine(line: string, node: Node)
+		setbufline(this.buf, this.lnum, line)
+		add(this.table_actions, node)
+		this.lnum += 1
+	enddef
 
 
 	def AddLine(line: string, path: string)
@@ -292,140 +275,9 @@ export class SupraTreeBuffer
 		this.lnum += 1
 	enddef
 
+	var lst_nodes: list<Node> = []
 
-	###################################
-	# Get the icon for a file
-	###################################
-
-	def GetIcons(path: string, is_directory: number = 0): string
-		if this.icon_work == false
-			return ''
-		endif
-		if is_directory == 0
-			try
-				return call(g:supratree_icons_glyph_func, [path])
-			catch
-				return ''
-			endtry
-		elseif is_directory == 1
-			return '󰉋'
-		elseif is_directory == 2
-			return ''
-		else
-			return ''
-		endif
-	enddef
-
-
-
-	######################################################
-	## Read all files and folders and return an array
-	######################################################
-	def GetCustomFileList(path: string): list<string>
-		var dirs: list<string> = []
-		var files: list<string> = []
-		var filter_pattern: string 
-
-		# Create the combined filter pattern for the best performance
-		if g:supratree_show_hidden == false
-			filter_pattern = '\%(^\.'
-		else
-			filter_pattern = '\%('
-		endif
-		if exists('g:supratree_filter_files') && len(g:supratree_filter_files) > 0
-			if filter_pattern == '\%(^\.'
-				filter_pattern ..= '\|'
-			endif
-			filter_pattern = filter_pattern .. g:supratree_filter_files
-				->mapnew((_, val) => glob2regpat(val))
-				->join('\|')
-		endif
-		filter_pattern ..= '\)'
-
-		const entries = readdirex(path, (n) => (filter_pattern == '' || n.name !~ filter_pattern), {sort: 'none'})
-
-		for entrie in entries
-			if entrie.type == 'dir'
-				dirs->add(entrie.name)
-			else
-				files->add(entrie.name)
-			endif
-		endfor
-		return sort(dirs, 'i') + sort(files, 'i')
-	enddef
-
-	def GetPrefixLine(depth: number): string
-		if depth < 2
-			return repeat('  ', depth)
-		endif 
-		return '  ' .. repeat('│ ', float2nr(depth / 2))
-	enddef
-
-	########################################################################
-	# draw the path recursively with a depth parameter
-	# but open the folder is the path is in the array 'open_folders'
-	########################################################################
-	def RecursiveDraw(path: string, depth: number)
-		const file_list = this.GetCustomFileList(path)
-		const len_list = len(file_list)
-
-		var index = 0
-		while index < len_list
-			const name = file_list[index]
-			const full_path = path .. '/' .. name
-			# const prefix = repeat(' ', depth)
-			const prefix = this.GetPrefixLine(depth)
-			const is_deleted = this.actions.FileIsDeleted(full_path)
-
-
-			if isdirectory(full_path)
-				if index(this.open_folders, full_path) != -1
-					if is_deleted == true
-						this.AddLine(prefix .. ' ' .. this.GetIcons('', 3) .. ' ' .. name, full_path)
-					else
-						this.AddLine(prefix .. ' ' .. this.GetIcons('', 2) .. ' ' .. name, full_path)
-					endif
-					if is_deleted == true
-						call prop_add(this.lnum - 1, 1, {type: 'SupraTreeDeletedProp', length: len(getline(this.lnum - 1)), bufnr: this.buf})
-					endif
-					this.RecursiveDraw(full_path, depth + 1)
-				else
-					if is_deleted == true
-						this.AddLine(prefix .. ' ' .. this.GetIcons('', 3) .. ' ' .. name, full_path)
-					else
-						this.AddLine(prefix .. ' ' .. this.GetIcons('', 1) .. ' ' .. name, full_path)
-					endif
-					if is_deleted == true
-						call prop_add(this.lnum - 1, 1, {type: 'SupraTreeDeletedProp', length: len(getline(this.lnum - 1)), bufnr: this.buf})
-					endif
-				endif
-			else
-				var icon: string
-				if is_deleted == true
-					icon = this.GetIcons('', 3)
-				else
-					icon = this.GetIcons(full_path)
-				endif
-				if depth == 0
-					if index == len_list - 1
-						this.AddLine(prefix .. '  ' .. icon .. ' ' .. name, full_path)
-					else
-						this.AddLine(prefix .. '  ' .. icon .. ' ' .. name, full_path)
-					endif
-				else
-					if index == len_list - 1
-						this.AddLine(prefix .. '╰ ' .. icon .. ' ' .. name, full_path)
-					else
-						this.AddLine(prefix .. '│ ' .. icon .. ' ' .. name, full_path)
-					endif
-				endif
-
-
-				if is_deleted == true
-					call prop_add(this.lnum - 1, 1, {type: 'SupraTreeDeletedProp', length: len(getline(this.lnum - 1)), bufnr: this.buf})
-				endif
-			endif
-			index += 1
-		endwhile
+	def DrawNodesList()
+		this.general_node.DrawChilds()
 	enddef
 endclass
