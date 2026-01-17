@@ -9,6 +9,7 @@ import autoload './DirectoryNode.vim' as ADirectoryNode
 import autoload './FileNode.vim' as AFileNode
 import autoload './NodeType.vim' as NodeType
 import autoload './Modified.vim' as AModified
+import autoload './PopupSave.vim' as PopupSave
 
 type Input = Popup.Input
 type Node = ANode.Node
@@ -90,10 +91,33 @@ export class SupraTreeBuffer
 	enddef
 
 
+	#######################################################
+	# Save Actions  (called on BufWriteCmd) or with <C-S>
+	#######################################################
 	def SaveActions()
 		var modified = Modified.new()
+
 		this.general_node.GetAllSaveActions(modified)
-		modified.Print()
+
+		if modified.IsEmpty() == true
+			echom "SupraTree: No changes to save."
+			return
+		endif
+
+		var SavePopup = PopupSave.PopupSave.new(modified) 
+
+		SavePopup.OnYes(() => {
+			modified.ApplyAll()
+			this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
+			this.general_node.Open()
+			this.RefreshKeepPos()
+		})
+
+		SavePopup.OnCancel(() => {
+			this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
+			this.general_node.Open()
+			this.RefreshKeepPos()
+		})
 	enddef
 
 

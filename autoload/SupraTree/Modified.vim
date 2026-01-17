@@ -1,6 +1,6 @@
 vim9script
 
-
+import autoload './Utils.vim' as Utils
 
 ####################################
 #   Abstract Classes for Modified  #
@@ -9,6 +9,7 @@ vim9script
 abstract class BaseObject
 	abstract def ToString(): string
 	abstract def GetWeight(): number
+	abstract def Apply(): bool 
 endclass
 
 abstract class NewObject extends BaseObject
@@ -22,6 +23,17 @@ endclass
 abstract class RenamedObject extends BaseObject
     var original_path: string
     var new_path: string
+
+    def ToString(): string
+		const icon_1 = Utils.GetIcons(this.original_path)
+		const icon_2 = Utils.GetIcons(this.new_path)
+
+		return "[Rename]       " .. icon_1 .. ' ' .. this.original_path .. ' → ' .. icon_2 .. ' ' .. this.new_path
+    enddef
+
+    def Apply(): bool
+        return rename(this.original_path, this.new_path) == 0
+    enddef
 
     def Init(orig: string, newp: string)
         this.original_path = simplify(orig)
@@ -42,7 +54,11 @@ class DeletedFileObject extends DeletedObject
 	enddef
 
 	def ToString(): string
-		return "Deleted File: " .. this.path
+		return "[Deleted File] " .. Utils.GetIcons(this.path) .. ' ' .. this.path
+	enddef
+
+	def Apply(): bool
+		return delete(this.path) == 0
 	enddef
 
 	def GetWeight(): number
@@ -59,8 +75,12 @@ class DeletedDirectoryObject extends DeletedObject
 		return 5
 	enddef
 
+	def Apply(): bool
+		return delete(this.path, 'rf') == 0
+	enddef
+
 	def ToString(): string
-		return "Deleted Directory: " .. this.path
+		return "[Deleted Dir] " .. Utils.GetIcons(this.path) .. ' ' .. this.path
 	enddef
 endclass
 
@@ -70,17 +90,9 @@ class RenamedFileObject extends RenamedObject
         super.Init(orig, newp)
     enddef
 
-    def ToString(): string
-        return "Renamed File: " .. this.original_path .. " -> " .. this.new_path
-    enddef
-
 	def GetWeight(): number
 		return 3
 	enddef
-
-    def Apply(): bool
-        return rename(this.original_path, this.new_path) == 0
-    enddef
 endclass
 
 class RenamedDirectoryObject extends RenamedObject
@@ -91,14 +103,6 @@ class RenamedDirectoryObject extends RenamedObject
 	def GetWeight(): number
 		return 4
 	enddef
-
-    def ToString(): string
-        return "Renamed Directory: " .. this.original_path .. " -> " .. this.new_path
-    enddef
-
-    def Apply(): bool
-        return rename(this.original_path, this.new_path) == 0
-    enddef
 endclass
 
 
@@ -114,8 +118,16 @@ class NewFileObject extends NewObject
 		return 2
 	enddef
 
+	def Apply(): bool
+		const dir_path = fnamemodify(this.path, ':h')
+		if !isdirectory(dir_path)
+			mkdir(dir_path, 'p')
+		endif
+		return writefile([], this.path) == 0
+	enddef
+
 	def ToString(): string
-		return "New File: " .. this.path
+		return '[New File]     ' .. Utils.GetIcons(this.path) .. ' ' .. this.path
 	enddef
 endclass
 
@@ -130,11 +142,14 @@ class NewDirectoryObject extends NewObject
 		return 1
 	enddef
 
+	def Apply(): bool
+		return mkdir(this.path, 'p') == 0
+	enddef
+
 	def ToString(): string
-		return "New Directory: " .. this.path
+		return '[New Dir]      ' .. Utils.GetIcons(this.path, 2) .. ' ' .. this.path
 	enddef
 endclass
-
 
 
 
@@ -176,18 +191,25 @@ export class Modified
         })
     enddef
 
-	def Apply()
+	def ApplyAll()
 		this.Sort()
 		for node in this.modified_lst
 			echo node.Apply()
 		endfor
 	enddef
 
-	def Print()
+	def IsEmpty(): bool
+		return len(this.modified_lst) == 0
+	enddef
+
+	def GetStringList(): list<string>
+		var lst: list<string> = []
 		this.Sort()
+
 		for node in this.modified_lst
-			echo node.ToString()
+			lst->add(node.ToString())
 		endfor
+		return lst
 	enddef
 
 endclass
