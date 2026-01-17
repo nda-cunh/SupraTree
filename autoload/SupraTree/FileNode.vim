@@ -8,7 +8,11 @@ import autoload './Utils.vim' as Utils
 export class FileNode extends Node.Node
 	def new(this.parent, this.name, this.type, this.depth)
 	enddef
-	
+
+	def GetKlassType(): string
+		return 'File'
+	enddef
+
 	def Draw(is_end: bool = false)
 		const singleton: any = g:supra_tree 
 		const prefix = Utils.GetPrefixLine(this.depth)
@@ -21,13 +25,12 @@ export class FileNode extends Node.Node
 		endif
 
 		if this.depth == 0
-			singleton.NewAddLine(prefix .. '  ' .. icon .. ' ' .. this.name, this)
+			singleton.NewAddLine(prefix .. '  ' .. icon .. ' ' .. this.GetSuffix(), this)
 		else
-			const line = '' .. prefix .. (this.is_last ? '╰ ' : '│ ') .. icon .. ' ' .. this.name
+			const line = '' .. prefix .. (this.is_last ? '╰ ' : '│ ') .. icon .. ' ' .. this.GetSuffix()
 			singleton.NewAddLine(line, this)
 		endif
 
-		# Adding Properties
 		super.AddPropAttribute()
 	enddef
 

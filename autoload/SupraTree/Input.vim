@@ -1,8 +1,5 @@
 vim9script
 
-# Temporary input popup class
-# Use Gtk.vim in future for better input handling
-
 export class Input
 	var prompt: string
 	var prompt_charlen: number

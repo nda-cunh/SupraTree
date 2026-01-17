@@ -8,12 +8,14 @@ import autoload './SpecialNode.vim' as ASpecialNode
 import autoload './DirectoryNode.vim' as ADirectoryNode
 import autoload './FileNode.vim' as AFileNode
 import autoload './NodeType.vim' as NodeType
+import autoload './Modified.vim' as AModified
 
 type Input = Popup.Input
 type Node = ANode.Node
 type SpecialNode = ASpecialNode.SpecialNode
 type DirectoryNode = ADirectoryNode.DirectoryNode
 type FileNode = AFileNode.FileNode
+type Modified = AModified.Modified
 
 export class SupraTreeBuffer
 	var buf: number # Buffer number
@@ -89,7 +91,9 @@ export class SupraTreeBuffer
 
 
 	def SaveActions()
-		echom "SupraTree: Actions saved."
+		var modified = Modified.new()
+		this.general_node.GetAllSaveActions(modified)
+		modified.Print()
 	enddef
 
 
@@ -100,7 +104,7 @@ export class SupraTreeBuffer
 			title: title,
 			line: "cursor-3",
 			col: "cursor+1",
-			moved: 'WORD'
+			moved: [0, 2000]
 		})
 		input.SetInput(initial_text)
 		input.AddCbChanged((key, line) => {
@@ -119,10 +123,8 @@ export class SupraTreeBuffer
 		var test_node: Node = this.table_actions[index - 1]
 		var node_parent: Node
 		if test_node->instanceof(DirectoryNode) == true
-			# if the target is an open directory, we create the new file inside it
 			node_parent = test_node
 		else
-			# else we create the new file in the parent directory
 			node_parent = test_node.GetParent()
 		endif
 		if node_parent->instanceof(SpecialNode)
@@ -132,12 +134,8 @@ export class SupraTreeBuffer
 
 		setbufvar(this.buf, '&modifiable', 1)
 
-		# 3. Insérer la ligne vide
-		# append(n, '') insère APRES la ligne n.
-		# Si on veut insérer TOUT en haut (avant la ligne 1), n doit être 0.
 		append(target_lnum, "")
 
-		# 4. Placer le curseur sur la nouvelle ligne
 		cursor(target_lnum + 1, 1)
 
 		var input = this.CreatePopup('', '󰑕 New File')
@@ -191,11 +189,54 @@ export class SupraTreeBuffer
 			node_parent.AddChild(new_node)
 			this.Refresh()
 			input.Close()
-			this.GoToPath(parent_path .. '/' .. new_name)
+			this.GoToPath(new_node.GetFullPath())
 		})
 	enddef
 
 	def OnRename()
+		const current_lnum = line('.')
+		const node = this.table_actions[current_lnum - 1]
+
+		if node->instanceof(SpecialNode)
+			echom "Error: Cannot rename this item."
+			return
+		endif
+		if node.type == NodeType.Deleted
+			echom "Error: Cannot rename a deleted file."
+			return
+		endif
+
+		noautocmd setbufvar(this.buf, '&modifiable', 1)
+
+		var input = this.CreatePopup(node.name, '󰒓 Rename File')
+
+		input.AddCbChanged((key, line) => {
+			setbufline(this.buf, current_lnum, node.GetPrefixLine() .. '│ ' .. input.GetPrompt() .. line)
+		})
+
+		input.AddCbQuit(() => {
+			this.RefreshKeepPos()
+			setbufvar(this.buf, '&modifiable', 0)
+		})
+
+		input.AddCbEnter((new_name) => {
+			# rename the file with the given name
+			if len(new_name) == 0
+				echom "Error: File name cannot be empty."
+				return
+			endif
+			# test the filename with an regex for invalid characters
+			if !(new_name =~# '\v^[a-zA-Z0-9._-]+$')
+				echom "Error: Invalid file name."
+				return
+			endif
+			echom "Rename file: " .. node.GetFullPath() .. " to " .. new_name
+			node.Rename(new_name)
+			this.Refresh()
+			input.Close()
+			this.GoToPath(node.GetFullPath())
+			setbufvar(this.buf, '&modifiable', 0)
+		})
 	enddef
 
 	def OnRemove()

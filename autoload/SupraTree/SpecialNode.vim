@@ -9,6 +9,10 @@ export class SpecialNode extends Node.Node
 	def new(this.action)
 	enddef
 
+	def GetKlassType(): string
+		return 'Special'
+	enddef
+
 	def Draw(is_end: bool = false)
 	enddef
 	
