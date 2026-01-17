@@ -56,19 +56,20 @@ export class SupraTreeBuffer
 		setbufvar(buf, '&filetype', 'SupraTree')
 
 
-		map <buffer> <cr>			<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		map <buffer> <c-t>			<scriptcmd>b:supra_tree.OnClick(Toggle.NewTab)<cr>
-		map <buffer> <c-h>			<scriptcmd>b:supra_tree.OnClick(Toggle.Split)<cr>
-		map <buffer> <c-v>			<scriptcmd>b:supra_tree.OnClick(Toggle.VSplit)<cr>
-		map <buffer> <2-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		map <buffer> <3-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		map <buffer> <4-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		map <buffer> <c-s>			<scriptcmd>b:supra_tree.SaveActions()<cr>
-		map <buffer> r 				<scriptcmd>b:supra_tree.Refresh()<cr>
-		map <buffer> dd				<scriptcmd>b:supra_tree.OnRemove()<cr>
-		map <buffer> i				<scriptcmd>b:supra_tree.OnRename()<cr>
-		map <buffer> O 				<scriptcmd>b:supra_tree.OnNewFile(true)<cr>
-		map <buffer> o 				<scriptcmd>b:supra_tree.OnNewFile(false)<cr>
+		nnoremap <buffer> <cr>			<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <c-t>			<scriptcmd>b:supra_tree.OnClick(Toggle.NewTab)<cr>
+		nnoremap <buffer> <c-h>			<scriptcmd>b:supra_tree.OnClick(Toggle.Split)<cr>
+		nnoremap <buffer> <c-v>			<scriptcmd>b:supra_tree.OnClick(Toggle.VSplit)<cr>
+		nnoremap <buffer> <2-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <3-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <4-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <c-s>			<scriptcmd>b:supra_tree.SaveActions()<cr>
+		nnoremap <buffer> r 			<scriptcmd>b:supra_tree.Refresh()<cr>
+		nnoremap <buffer> dd			<scriptcmd>b:supra_tree.OnRemove(false)<cr>
+		vnoremap <buffer> d				<esc><scriptcmd>b:supra_tree.OnRemove(true)<cr>
+		nnoremap <buffer> i				<scriptcmd>b:supra_tree.OnRename()<cr>
+		nnoremap <buffer> O 			<scriptcmd>b:supra_tree.OnNewFile(true)<cr>
+		nnoremap <buffer> o 			<scriptcmd>b:supra_tree.OnNewFile(false)<cr>
 		# map <buffer> p				<scriptcmd>b:supra_tree.Paste()<cr>
 
 		au BufWriteCmd <buffer>		if exists('b:supra_tree')	| b:supra_tree.SaveActions() | endif
@@ -263,10 +264,36 @@ export class SupraTreeBuffer
 		})
 	enddef
 
-	def OnRemove()
+	def OnRemove(visual: bool)
+		echom "SupraTree: Remove file(s) ..."
 		const lnum = line('.')
-		var node = this.table_actions[line('.') - 1]
-		node.SetDeleted()
+		const e = &filetype
+		var min: number
+		var max: number
+		if visual
+			min = getpos("'<")[1]
+			max = getpos("'>")[1]
+		else
+			min = line('.')
+			if exists('v:count') && v:count != 0
+				max = min + v:count - 1
+			else
+				max = min
+			endif
+		endif
+
+		if max > line('$')
+			max = line('$')
+		endif
+	
+		for nb in range(min, max)
+			const node = this.table_actions[nb - 1]
+			node.SetDeleted()
+		endfor
+
+		# var node = this.table_actions[line('.') - 1]
+		# node.SetDeleted()
+
 		this.RefreshKeepPos()
 	enddef
 

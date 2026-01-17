@@ -83,7 +83,6 @@ export abstract class Node
 	enddef
 
 	def SetDeleted()
-		echom "Remove file: " .. this.parent .. '/' .. this.name
 		if this.type == NodeType.SimpleFile
 			this.type = NodeType.Deleted
 		elseif this.type == NodeType.Deleted
