@@ -53,4 +53,3 @@ export class FileNode extends Node.Node
 		endif
 	enddef
 endclass
-

@@ -24,10 +24,7 @@ export class SupraTreeBuffer
 	var lnum: number # Current line number to write
 	var table_actions: list<Node>
 	var icon_work: bool
-
-	def GetBuf(): number
-		return this.buf
-	enddef
+	var general_node: DirectoryNode
 
 	def new()
 		const buf = bufadd('SupraTree')
@@ -81,225 +78,15 @@ export class SupraTreeBuffer
 		this.Refresh()
 	enddef
 
-	var general_node: DirectoryNode
+	def GetBuf(): number
+		return this.buf
+	enddef
 
 	static def Quit()
-		echoerr "SupraTree: Remove instance ..."
 		silent! unlet g:supratree_isopen
 		silent! unlet t:supratree_isopen
 		silent! unlet g:supra_tree
 		silent! unlet b:supra_tree
-	enddef
-
-
-	#######################################################
-	# Save Actions  (called on BufWriteCmd) or with <C-S>
-	#######################################################
-	def SaveActions()
-		var modified = Modified.new()
-
-		this.general_node.GetAllSaveActions(modified)
-
-		if modified.IsEmpty() == true
-			echom "SupraTree: No changes to save."
-			return
-		endif
-
-		var SavePopup = PopupSave.PopupSave.new(modified) 
-
-		SavePopup.OnYes(() => {
-			modified.ApplyAll()
-			this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
-			this.general_node.Open()
-			this.RefreshKeepPos()
-		})
-
-		SavePopup.OnCancel(() => {
-			this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
-			this.general_node.Open()
-			this.RefreshKeepPos()
-		})
-	enddef
-
-
-	def CreatePopup(initial_text: string, title: string): Input
-		const icon = Utils.GetIcons(initial_text)
-		var input = Input.new(icon .. ' ', {
-			minwidth: 24,
-			title: title,
-			line: "cursor-3",
-			col: "cursor+1",
-			moved: [0, 2000]
-		})
-		input.SetInput(initial_text)
-		input.AddCbChanged((key, line) => {
-			const ic = Utils.GetIcons(line) # preload icon cache
-			input.SetPrompt(ic .. ' ')
-		})
-		win_execute(input.popup, 'silent! call(g:supratree_icons_glyph_palette_func, [])')
-		return input
-	enddef
-
-	def OnNewFile(is_up: bool)
-		const current_lnum = line('.')
-		const target_lnum = is_up ? current_lnum - 1 : current_lnum
-
-		var index = current_lnum + (is_up == true ? -1 : 0)
-		var test_node: Node = this.table_actions[index - 1]
-		var node_parent: Node
-		if test_node->instanceof(DirectoryNode) == true
-			node_parent = test_node
-		else
-			node_parent = test_node.GetParent()
-		endif
-		if node_parent->instanceof(SpecialNode)
-			echom "Error: Cannot create a new file here."
-			return
-		endif
-
-		setbufvar(this.buf, '&modifiable', 1)
-
-		append(target_lnum, "")
-
-		cursor(target_lnum + 1, 1)
-
-		var input = this.CreatePopup('', '󰑕 New File')
-		input.AddCbChanged((key, line) => {
-			setbufline(this.buf, target_lnum + 1, '  ' .. input.GetPrompt() .. line)
-		})
-		input.AddCbQuit(() => {
-			this.RefreshKeepPos()
-		})
-		input.AddCbEnter((new_name) => {
-			# create the new file with the given name
-			if len(new_name) == 0
-				echom "Error: File name cannot be empty."
-				return
-			endif
-			# test the filename with an regex for invalid characters
-			var is_directory: bool
-			if new_name[-1] == '/'
-				# an directory is only word characters but end with / can't
-				# contains more '/' but only at the end
-				if !(new_name[0 : -2] =~# '\v^[a-zA-Z0-9._-]+$')
-					echom "Error: Invalid directory name."
-					return
-				endif
-				is_directory = true
-			else
-				if !(new_name =~# '\v^[a-zA-Z0-9._-]+$')
-					echom "Error: Invalid file name."
-					return
-				endif
-				is_directory = false
-			endif
-
-			var new_node: Node
-			var parent_path: string
-			if node_parent->instanceof(DirectoryNode) == true
-				parent_path = node_parent.parent .. '/' .. node_parent.name
-			else
-				parent_path = node_parent.GetParent().parent .. '/' .. node_parent.node_parent.name
-			endif
-
-			if is_directory == true
-				new_node = DirectoryNode.new(parent_path, new_name[0 : -2], NodeType.NewFile, node_parent.depth + 1)
-				# echom "Create new directory: " .. parent_path .. '/' .. new_name[0 : -2]
-			else
-				new_node = FileNode.new(parent_path, new_name, NodeType.NewFile, node_parent.depth + 1)
-				# echom "Create new file: " .. parent_path .. '/' .. new_name
-			endif
-
-			echom "Name: " .. new_node.name .. " Parent: " .. new_node.parent
-			node_parent.AddChild(new_node)
-			this.Refresh()
-			input.Close()
-			this.GoToPath(new_node.GetFullPath())
-		})
-	enddef
-
-	def OnRename()
-		const current_lnum = line('.')
-		const node = this.table_actions[current_lnum - 1]
-
-		if node->instanceof(SpecialNode)
-			echom "Error: Cannot rename this item."
-			return
-		endif
-		if node.type == NodeType.Deleted
-			echom "Error: Cannot rename a deleted file."
-			return
-		endif
-
-		noautocmd setbufvar(this.buf, '&modifiable', 1)
-
-		var input = this.CreatePopup(node.name, '󰒓 Rename File')
-
-		input.AddCbChanged((key, line) => {
-			setbufline(this.buf, current_lnum, node.GetPrefixLine() .. '│ ' .. input.GetPrompt() .. line)
-		})
-
-		input.AddCbQuit(() => {
-			this.RefreshKeepPos()
-			setbufvar(this.buf, '&modifiable', 0)
-		})
-
-		input.AddCbEnter((new_name) => {
-			# rename the file with the given name
-			if len(new_name) == 0
-				echom "Error: File name cannot be empty."
-				return
-			endif
-			# test the filename with an regex for invalid characters
-			if !(new_name =~# '\v^[a-zA-Z0-9._-]+$')
-				echom "Error: Invalid file name."
-				return
-			endif
-			echom "Rename file: " .. node.GetFullPath() .. " to " .. new_name
-			node.Rename(new_name)
-			this.Refresh()
-			input.Close()
-			this.GoToPath(node.GetFullPath())
-			setbufvar(this.buf, '&modifiable', 0)
-		})
-	enddef
-
-	def OnRemove(visual: bool)
-		echom "SupraTree: Remove file(s) ..."
-		const lnum = line('.')
-		const e = &filetype
-		var min: number
-		var max: number
-		if visual
-			min = getpos("'<")[1]
-			max = getpos("'>")[1]
-		else
-			min = line('.')
-			if exists('v:count') && v:count != 0
-				max = min + v:count - 1
-			else
-				max = min
-			endif
-		endif
-
-		if max > line('$')
-			max = line('$')
-		endif
-	
-		for nb in range(min, max)
-			const node = this.table_actions[nb - 1]
-			node.SetDeleted()
-		endfor
-
-		# var node = this.table_actions[line('.') - 1]
-		# node.SetDeleted()
-
-		this.RefreshKeepPos()
-	enddef
-
-	def OnClick(type: Toggle.Type)
-		const node = this.table_actions[line('.') - 1]
-		node.Action(type)
 	enddef
 
 	def GoToPath(path: string)
@@ -329,7 +116,7 @@ export class SupraTreeBuffer
 		call setbufline(this.buf, 1, [])
 		call deletebufline(this.buf, 1, '$')
 		this.DrawHeader(getcwd())
-		this.DrawNodesList()
+		this.general_node.DrawChilds()
 		# test if the function exist
 		if exists('g:supratree_icons_glyph_palette_func')
 			silent! call(g:supratree_icons_glyph_palette_func, [])
@@ -339,20 +126,45 @@ export class SupraTreeBuffer
 	enddef
 
 
+	#######################################################
+	# Save Actions  (called on BufWriteCmd) or with <C-S>
+	#######################################################
+	def SaveActions()
+		var modified = Modified.new()
+
+		this.general_node.GetAllSaveActions(modified)
+
+		if modified.IsEmpty() == true
+			throw "SupraTree: No changes to save."
+		endif
+
+		var SavePopup = PopupSave.PopupSave.new(modified) 
+
+		SavePopup.OnYes(() => {
+			modified.ApplyAll()
+			this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
+			this.general_node.Open()
+			this.RefreshKeepPos()
+		})
+
+		SavePopup.OnCancel(() => {
+			this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
+			this.general_node.Open()
+			this.RefreshKeepPos()
+		})
+	enddef
+
 	# draw the tree header
 	def DrawHeader(pwd: string)
+		const path = substitute(pwd, '^' .. $HOME, '~', '')
 		this.icon_work = Utils.TestIfIconsWork()
-		var path = substitute(pwd, '^' .. $HOME, '~', '')
 		this.lnum = 1
 		this.table_actions = []
-		setbufline(this.buf, 1, path .. '/')
 
-		# use too NewAddLine to add Node objects
 		this.NewAddLine(path .. '/', SpecialNode.new('ChangePath'))
 		this.NewAddLine('', SpecialNode.new('null'))
 		this.NewAddLine(Utils.GetIcons('', 2) .. ' ../', SpecialNode.new('prev'))
 	enddef
-
 
 	def NewAddLine(line: string, node: Node)
 		setbufline(this.buf, this.lnum, line)
@@ -360,16 +172,172 @@ export class SupraTreeBuffer
 		this.lnum += 1
 	enddef
 
+	######################################
+	# Events 
+	######################################
 
-	def AddLine(line: string, path: string)
-		setbufline(this.buf, this.lnum, line)
-		this.table_prefix[this.lnum - 1] = path
-		this.lnum += 1
+	def OnNewFile(is_up: bool)
+		const current_lnum = line('.')
+		const target_lnum = is_up ? current_lnum - 1 : current_lnum
+
+		var index = current_lnum + (is_up == true ? -1 : 0)
+		var test_node: Node = this.table_actions[index - 1]
+		var node_parent: Node
+		if test_node->instanceof(DirectoryNode) == true
+			node_parent = test_node
+		else
+			node_parent = test_node.GetParent()
+		endif
+		if node_parent->instanceof(SpecialNode)
+			throw "Cannot create a new file here."
+		endif
+
+		setbufvar(this.buf, '&modifiable', 1)
+
+		append(target_lnum, "")
+
+		cursor(target_lnum + 1, 1)
+
+		var input = CreatePopup('', '󰑕 New File')
+
+		input.AddCbChanged((key, line) => {
+			setbufline(this.buf, target_lnum + 1, '  ' .. input.GetPrompt() .. line)
+		})
+
+		input.AddCbQuit(() => {
+			this.RefreshKeepPos()
+		})
+
+		input.AddCbEnter((new_name) => {
+			# create the new file with the given name
+			if len(new_name) == 0
+				throw "File name cannot be empty."
+			endif
+			# test the filename with an regex for invalid characters
+			var is_directory: bool
+			if new_name[-1] == '/'
+				# an directory is only word characters but end with / can't
+				# contains more '/' but only at the end
+				if !(new_name[0 : -2] =~# '\v^[a-zA-Z0-9._-]+$')
+					throw "Invalid directory name."
+				endif
+				is_directory = true
+			else
+				if !(new_name =~# '\v^[a-zA-Z0-9._-]+$')
+					throw "Invalid file name."
+				endif
+				is_directory = false
+			endif
+
+			var new_node: Node
+			var parent_path: string
+			if node_parent->instanceof(DirectoryNode) == true
+				parent_path = node_parent.parent .. '/' .. node_parent.name
+			else
+				parent_path = node_parent.GetParent().parent .. '/' .. node_parent.node_parent.name
+			endif
+
+			if is_directory == true
+				new_node = DirectoryNode.new(parent_path, new_name[0 : -2], NodeType.NewFile, node_parent.depth + 1)
+			else
+				new_node = FileNode.new(parent_path, new_name, NodeType.NewFile, node_parent.depth + 1)
+			endif
+
+			node_parent.AddChild(new_node)
+			this.Refresh()
+			input.Close()
+			this.GoToPath(new_node.GetFullPath())
+		})
 	enddef
 
-	var lst_nodes: list<Node> = []
+	def OnRename()
+		const current_lnum = line('.')
+		const node = this.table_actions[current_lnum - 1]
 
-	def DrawNodesList()
-		this.general_node.DrawChilds()
+		if node->instanceof(SpecialNode)
+			throw "Cannot rename this item."
+		endif
+		if node.type == NodeType.Deleted
+			throw "Cannot rename a deleted file."
+		endif
+
+		noautocmd setbufvar(this.buf, '&modifiable', 1)
+
+		var input = CreatePopup(node.name, '󰒓 Rename File')
+
+		input.AddCbChanged((key, line) => {
+			setbufline(this.buf, current_lnum, node.GetPrefixLine() .. '│ ' .. input.GetPrompt() .. line)
+		})
+
+		input.AddCbQuit(() => {
+			this.RefreshKeepPos()
+			setbufvar(this.buf, '&modifiable', 0)
+		})
+
+		input.AddCbEnter((new_name) => {
+			node.Rename(new_name)
+			this.Refresh()
+			input.Close()
+			this.GoToPath(node.GetFullPath())
+			setbufvar(this.buf, '&modifiable', 0)
+		})
 	enddef
+
+	def OnRemove(visual: bool)
+		const lnum = line('.')
+		const e = &filetype
+		var min: number
+		var max: number
+		if visual
+			min = getpos("'<")[1]
+			max = getpos("'>")[1]
+		else
+			min = line('.')
+			if exists('v:count') && v:count != 0
+				max = min + v:count - 1
+			else
+				max = min
+			endif
+		endif
+
+		if max > line('$')
+			max = line('$')
+		endif
+	
+		for nb in range(min, max)
+			const node = this.table_actions[nb - 1]
+			node.SetDeleted()
+		endfor
+
+		this.RefreshKeepPos()
+	enddef
+
+	def OnClick(type: Toggle.Type)
+		const node = this.table_actions[line('.') - 1]
+		node.Action(type)
+	enddef
+
 endclass
+
+
+##########################################
+# Utility Functions
+##########################################
+
+def CreatePopup(initial_text: string, title: string): Input
+	const icon = Utils.GetIcons(initial_text)
+	var input = Input.new(icon .. ' ', {
+		minwidth: 24,
+		title: title,
+		line: "cursor-3",
+		col: "cursor+1",
+		moved: [0, 2000]
+	})
+	input.SetInput(initial_text)
+	input.AddCbChanged((key, line) => {
+		const ic = Utils.GetIcons(line) # preload icon cache
+		input.SetPrompt(ic .. ' ')
+	})
+	win_execute(input.popup, 'silent! call(g:supratree_icons_glyph_palette_func, [])')
+	return input
+enddef

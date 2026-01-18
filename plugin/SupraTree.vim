@@ -32,6 +32,7 @@ augroup SupraTree
 	autocmd TabEnter * call Tree.OnTabEnter()
 	autocmd WinClosed * call Tree.WhenClosingWindow()
 	autocmd BufEnter * call Tree.CheckNeedClose()
+	autocmd ColorScheme * call DarkenColor.Create_HiColor()
 augroup END
 
 def g:ToggleTree()

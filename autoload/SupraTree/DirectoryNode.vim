@@ -162,4 +162,3 @@ export class DirectoryNode extends Node
 		endif
 	enddef
 endclass
-
