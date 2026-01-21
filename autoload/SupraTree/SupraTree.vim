@@ -4,6 +4,26 @@ import autoload 'SupraTree/SupraTreeBuffer.vim' as NSupraTreeBuffer
 
 type SupraTreeBuffer = NSupraTreeBuffer.SupraTreeBuffer
 
+export def OpenTree()
+	g:supratree_isopen = true
+	SupraTree#SupraTree#OpenWindow()
+enddef
+
+export def CloseTree()
+	g:supratree_isopen = false 
+	SupraTree#SupraTree#CloseWindow()
+enddef
+
+export def ToggleTree()
+	const value = get(g:, 'supratree_isopen', false)
+	if value == true
+		SupraTree#SupraTree#CloseTree()
+	else
+		SupraTree#SupraTree#OpenTree()
+	endif
+enddef
+
+
 export def CheckNeedClose()
 	var lst_tab = tabpagebuflist()
 	if len(lst_tab) == 1
@@ -37,15 +57,6 @@ export def OnTabEnter()
 		})
 	else
 		SupraTree#SupraTree#CloseWindow()
-	endif
-enddef
-
-export def ToggleTree()
-	const value = get(g:, 'supratree_isopen', false)
-	if value == true
-		call g:CloseTree()
-	else
-		call g:OpenTree()
 	endif
 enddef
 
@@ -97,4 +108,11 @@ export def OpenWindow()
 		b:supra_tree = instance
 	endif
 	wincmd p
+enddef
+
+export def RefreshTree()
+	if exists('g:supra_tree')
+		const tree: SupraTreeBuffer = g:supra_tree
+		tree.RefreshFileSystem()
+	endif
 enddef
