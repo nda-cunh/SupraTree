@@ -62,7 +62,7 @@ export class SupraTreeBuffer
 		nnoremap <buffer> <3-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
 		nnoremap <buffer> <4-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
 		nnoremap <buffer> <c-s>			<scriptcmd>b:supra_tree.SaveActions()<cr>
-		nnoremap <buffer> r 			<scriptcmd>b:supra_tree.Refresh()<cr>
+		nnoremap <buffer> r 			<scriptcmd>b:supra_tree.RefreshFileSystem()<cr>
 		nnoremap <buffer> dd			<scriptcmd>b:supra_tree.OnRemove(false)<cr>
 		vnoremap <buffer> d				<esc><scriptcmd>b:supra_tree.OnRemove(true)<cr>
 		nnoremap <buffer> i				<scriptcmd>b:supra_tree.OnRename()<cr>
@@ -105,6 +105,22 @@ export class SupraTreeBuffer
 		endwhile
 	enddef
 
+	def RefreshFileSystem()
+		var modified = Modified.new()
+		this.general_node.GetAllSaveActions(modified)
+		if modified.IsEmpty() == true
+			this.RefreshWithOpenedDirs(modified.GetOpenedDirectories())
+		endif
+	enddef
+
+	def RefreshWithOpenedDirs(opened_dirs: list<string>)
+		t:OpenedDirs = opened_dirs
+		this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
+		this.general_node.Open()
+		unlet t:OpenedDirs
+		this.RefreshKeepPos()
+	enddef
+
 	def RefreshKeepPos()
 		const winsaveview = winsaveview()
 		const pos = getpos('.')
@@ -145,15 +161,11 @@ export class SupraTreeBuffer
 
 		SavePopup.OnYes(() => {
 			modified.ApplyAll()
-			this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
-			this.general_node.Open()
-			this.RefreshKeepPos()
+			this.RefreshWithOpenedDirs(modified.GetOpenedDirectories())
 		})
 
 		SavePopup.OnCancel(() => {
-			this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
-			this.general_node.Open()
-			this.RefreshKeepPos()
+			this.RefreshWithOpenedDirs(modified.GetOpenedDirectories())
 		})
 	enddef
 

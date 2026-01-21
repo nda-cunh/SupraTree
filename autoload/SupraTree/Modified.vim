@@ -228,6 +228,7 @@ endclass
 
 export class Modified
 	var modified_lst: list<BaseObject> = []
+	var opened_dirs: list<string> = []
 
 	def Append_RenameFile(path: string, new_path: string)
 		this.modified_lst->add(RenamedFileObject.new(path, new_path))
@@ -269,6 +270,14 @@ export class Modified
             return order_a - order_b
         })
     enddef
+
+	def GetOpenedDirectories(): list<string>
+		return this.opened_dirs
+	enddef
+	
+	def AddOpenDirectory(path: string)
+		add(this.opened_dirs, simplify(path))
+	enddef
 
 	def ApplyAll()
 		this.Sort()

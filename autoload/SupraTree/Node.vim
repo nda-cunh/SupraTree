@@ -81,7 +81,7 @@ export abstract class Node
 	enddef
 
 	def GetFullPath(): string
-		return this.parent .. '/' .. this.name
+		return simplify(this.parent .. '/' .. this.name)
 	enddef
 
 	def Rename(new_name: string)
@@ -114,31 +114,45 @@ export abstract class Node
 
 	def GetAllSaveActions(modified: Modified)
 		const full_path = this.parent .. '/' .. this.name
+		var is_dir = false
+		if this.GetKlassType() == 'Dir'
+			is_dir = true
+		endif
 		if this.type == NodeType.Renamed
-			if this.GetKlassType() == 'Dir'
+			if is_dir == true
 				modified.Append_RenameDirectory(this.parent .. '/' .. this.name_before_rename, full_path)
 			else
 				modified.Append_RenameFile(this.parent .. '/' .. this.name_before_rename, full_path)
 			endif
 		elseif this.type == NodeType.Deleted
-			if this.GetKlassType() == 'Dir'
+			if is_dir == true
 				modified.Append_DeleteDirectory(full_path)
 			else
 				modified.Append_DeleteFile(full_path)
 			endif
 		elseif this.type == NodeType.NewFile
-			if this.GetKlassType() == 'Dir'
+			if is_dir == true
 				modified.Append_NewDirectory(full_path)
 			else
 				modified.Append_NewFile(full_path)
 			endif
 		elseif this.type == NodeType.Copy
-			if this.GetKlassType() == 'Dir'
+			if is_dir == true
 				modified.Append_CopiedDirectory(this.copy_of, full_path)
 			else
 				modified.Append_CopiedFile(this.copy_of, full_path)
 			endif
 		endif
+		if is_dir == true
+			if this.IsOpen() == true
+				modified.AddOpenDirectory(full_path)
+			endif
+		endif
+	enddef
+
+	def IsOpen(): bool
+		# NOTE Only DirectoryNode will implement this method
+		return false
 	enddef
 
 	def MarkAsCopied(path: string)

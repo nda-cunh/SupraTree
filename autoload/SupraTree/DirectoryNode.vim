@@ -30,6 +30,11 @@ export class DirectoryNode extends Node
 		endfor
 	enddef
 
+
+	def IsOpen(): bool
+		return this.is_open
+	enddef
+
 	def AddChild(new_child: Node)
 		this.Open()
 
@@ -131,9 +136,18 @@ export class DirectoryNode extends Node
 		if !empty(child_nodes) == true
 			child_nodes[-1].is_last = true
 		endif
+
+		var lst_opened_dirs: list<string> = get(t:, 'OpenedDirs', [])
+
 		this.children = child_nodes
 		for child in this.children
 			child.node_parent = this
+			if child->instanceof(DirectoryNode)
+				var dirnode = <DirectoryNode>child
+				if index(lst_opened_dirs, child.GetFullPath()) != -1
+					dirnode.Open()
+				endif
+			endif
 		endfor
 		singleton.RefreshKeepPos()
 	enddef
