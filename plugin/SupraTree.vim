@@ -17,6 +17,9 @@ g:supratree_filter_files = ['*.o', '*.class', '*.pyc', '*.exe', '*.dll', '*.so',
 g:supratree_show_hidden = true 
 g:SupraTreeForceColor = ''
 g:SupraTreeDarkenAmount = 22
+g:SupraTreePosition = 'left'
+g:SupraTreeWidth = 26
+g:SupraTreeOpenOnStartup = true 
 
 hi SupraTreeDeleted ctermfg=9 guifg=#f44444 guibg=NONE
 hi SupraTreeNewFile ctermfg=10 guifg=#48BF84 guibg=NONE
@@ -30,7 +33,9 @@ prop_type_add('SupraTreeCopyProp', {highlight: 'SupraTreeCopy', priority: 5060})
 
 augroup SupraTree
 	autocmd!
-	autocmd VimEnter * call g:OpenTree()
+	if get(g:, 'SupraTreeOpenOnStartup', true) == true
+		autocmd VimEnter * call g:OpenTree()
+	endif
 	autocmd TabEnter * call Tree.OnTabEnter()
 	autocmd WinClosed * call Tree.WhenClosingWindow()
 	autocmd BufEnter * call Tree.CheckNeedClose()

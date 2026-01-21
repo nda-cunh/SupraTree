@@ -67,11 +67,20 @@ export def OpenWindow()
 	if exists('t:supratree_winid')
 		return
 	endif
-	# Create the vertical window
-	execute 'noautocmd topleft vertical :new'
-	execute ':' .. 26 .. ' wincmd |'
-	t:supratree_winid = win_getid()
 
+	const size = get(g:, 'SupraTreeWidth', 26)
+
+	# If the position is left, open a topleft vertical split
+	if get(g:, 'SupraTreePosition', 'left') == 'left'
+		execute 'noautocmd topleft vertical :new'
+	else
+		execute 'noautocmd rightbelow vertical :new'
+	endif
+
+	# Set the width of the window
+	execute ':' .. size .. ' wincmd |'
+
+	t:supratree_winid = win_getid()
 	if exists('g:supra_tree')	
 		const tree: SupraTreeBuffer = g:supra_tree
 		const buf = tree.GetBuf()
