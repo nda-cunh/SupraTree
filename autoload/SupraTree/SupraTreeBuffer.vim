@@ -25,6 +25,7 @@ export class SupraTreeBuffer
 	var table_actions: list<Node>
 	var icon_work: bool
 	var general_node: DirectoryNode
+	var clipboard: list<Node> = []
 
 	def new()
 		const buf = bufadd('SupraTree')
@@ -67,7 +68,9 @@ export class SupraTreeBuffer
 		nnoremap <buffer> i				<scriptcmd>b:supra_tree.OnRename()<cr>
 		nnoremap <buffer> O 			<scriptcmd>b:supra_tree.OnNewFile(true)<cr>
 		nnoremap <buffer> o 			<scriptcmd>b:supra_tree.OnNewFile(false)<cr>
-		# map <buffer> p				<scriptcmd>b:supra_tree.Paste()<cr>
+		nnoremap <buffer> p				<scriptcmd>b:supra_tree.OnPaste()<cr>
+		nnoremap <buffer> yy				<scriptcmd>b:supra_tree.OnYank(false)<cr>
+		vnoremap <buffer> y				<esc><scriptcmd>b:supra_tree.OnYank(true)<cr>
 
 		au BufWriteCmd <buffer>		if exists('b:supra_tree')	| b:supra_tree.SaveActions() | endif
 		au BufWipeout <buffer>		SupraTreeBuffer.Quit()
@@ -164,6 +167,7 @@ export class SupraTreeBuffer
 		this.NewAddLine(path .. '/', SpecialNode.new('ChangePath'))
 		this.NewAddLine('', SpecialNode.new('null'))
 		this.NewAddLine(Utils.GetIcons('', 2) .. ' ../', SpecialNode.new('prev'))
+		# this.NewAddLine(, this.general_node)
 	enddef
 
 	def NewAddLine(line: string, node: Node)
@@ -310,6 +314,77 @@ export class SupraTreeBuffer
 		endfor
 
 		this.RefreshKeepPos()
+	enddef
+
+	# work like OnRemove for visual clip
+	def OnYank(visual: bool)
+		const lnum = line('.')
+		const e = &filetype
+		var min: number
+		var max: number
+		if visual
+			min = getpos("'<")[1]
+			max = getpos("'>")[1]
+		else
+			min = line('.')
+			if exists('v:count') && v:count != 0
+				max = min + v:count - 1
+			else
+				max = min
+			endif
+		endif
+
+		if max > line('$')
+			max = line('$')
+		endif
+		this.clipboard = []
+		for nb in range(min, max)
+			const node = this.table_actions[nb - 1]
+			add(this.clipboard, node)
+		endfor
+		echo 'Yanked ' .. len(this.clipboard) .. ' items to clipboard.'
+	enddef
+			
+	def OnPaste()
+		if len(this.clipboard) == 0
+			throw "Clipboard is empty."
+		endif
+
+		const current_lnum = line('.')
+		var test_node: Node = this.table_actions[current_lnum - 1]
+		var node_parent: Node
+		if test_node->instanceof(DirectoryNode) == true
+			node_parent = test_node
+		else
+			node_parent = test_node.GetParent()
+		endif
+		if node_parent->instanceof(SpecialNode)
+			throw "Cannot paste here."
+		endif
+
+		for node in this.clipboard
+			var new_node: Node
+			var try_i = 1
+			while try_i != 500
+				try
+					var new_name = node.name .. "_copy_" .. try_i
+					if node->instanceof(DirectoryNode) == true
+						new_node = DirectoryNode.new(node.parent, new_name, NodeType.Copy, node_parent.depth + 1)
+					else
+						new_node = FileNode.new(node.parent, new_name, NodeType.Copy, node_parent.depth + 1)
+					endif
+					node_parent.AddChild(new_node)
+					new_node.MarkAsCopied(node.GetFullPath())
+				catch
+					try_i += 1
+					continue
+				endtry
+				break
+			endwhile
+		endfor
+
+		this.RefreshKeepPos()
+		echo 'Pasted ' .. len(this.clipboard) .. ' items from clipboard.'
 	enddef
 
 	def OnClick(type: Toggle.Type)

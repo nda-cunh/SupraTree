@@ -41,6 +41,10 @@ abstract class RenamedObject extends BaseObject
     enddef
 endclass
 
+abstract class CopiedObject extends BaseObject
+	var original_path: string
+	var new_path: string
+endclass
 
 
 
@@ -62,7 +66,7 @@ class DeletedFileObject extends DeletedObject
 	enddef
 
 	def GetWeight(): number
-		return 6
+		return 7
 	enddef
 endclass
 
@@ -72,7 +76,7 @@ class DeletedDirectoryObject extends DeletedObject
 	enddef
 
 	def GetWeight(): number
-		return 5
+		return 8
 	enddef
 
 	def Apply(): bool
@@ -91,7 +95,7 @@ class RenamedFileObject extends RenamedObject
     enddef
 
 	def GetWeight(): number
-		return 3
+		return 5
 	enddef
 endclass
 
@@ -101,12 +105,79 @@ class RenamedDirectoryObject extends RenamedObject
     enddef
 
 	def GetWeight(): number
-		return 4
+		return 6
 	enddef
 endclass
 
 
+class CopiedFileObject extends CopiedObject
 
+	def new(orig: string, newp: string)
+		this.original_path = simplify(orig)
+		this.new_path = simplify(newp)
+	enddef
+
+	def GetWeight(): number
+		return 4
+	enddef
+
+	def ToString(): string
+		const icon_1 = Utils.GetIcons(this.original_path)
+		const icon_2 = Utils.GetIcons(this.new_path)
+
+		return "[Copy File]    " .. icon_1 .. ' ' .. this.original_path .. ' → ' .. icon_2 .. ' ' .. this.new_path
+	enddef
+
+	def Apply(): bool
+		# S'assurer que le répertoire de destination existe
+		const dest_dir = fnamemodify(this.new_path, ':h')
+		if !isdirectory(dest_dir)
+			mkdir(dest_dir, 'p')
+		endif
+
+		var data = readfile(this.original_path, 'b')
+		return writefile(data, this.new_path, 'b') == 0
+	enddef
+endclass
+
+
+class CopiedDirectoryObject extends CopiedObject
+
+	def new(orig: string, newp: string)
+		this.original_path = simplify(orig)
+		this.new_path = simplify(newp)
+	enddef
+
+	def GetWeight(): number
+		return 3
+	enddef
+
+	def ToString(): string
+		const icon_1 = Utils.GetIcons(this.original_path)
+		const icon_2 = Utils.GetIcons(this.new_path)
+
+		return "[Copy Dir]     " .. icon_1 .. ' ' .. this.original_path .. ' → ' .. icon_2 .. ' ' .. this.new_path
+	enddef
+
+	def Apply(): bool
+		# S'assurer que le dossier parent de la destination existe
+		const dest_parent = fnamemodify(this.new_path, ':h')
+		if !isdirectory(dest_parent)
+			mkdir(dest_parent, 'p')
+		endif
+
+		var cmd: string
+		if has('win32')
+			cmd = $'xcopy "{this.original_path}" "{this.new_path}" /E /I /H /Y'
+		else
+			cmd = $'cp -rp "{this.original_path}" "{this.new_path}"'
+		endif
+
+		system(cmd)
+
+		return v:shell_error == 0
+	enddef
+endclass
 
 
 class NewFileObject extends NewObject
@@ -180,6 +251,14 @@ export class Modified
 
 	def Append_NewDirectory(path: string)
 		this.modified_lst->add(NewDirectoryObject.new(path))
+	enddef
+
+	def Append_CopiedFile(orig: string, newp: string)
+		this.modified_lst->add(CopiedFileObject.new(orig, newp))
+	enddef
+
+	def Append_CopiedDirectory(orig: string, newp: string)
+		this.modified_lst->add(CopiedDirectoryObject.new(orig, newp))
 	enddef
 
     def Sort()

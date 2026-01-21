@@ -15,6 +15,7 @@ export abstract class Node
 	public var node_parent: Node 
 	public var is_last: bool = false
 	var name_before_rename: string
+	var copy_of: string
 
 	def AddChild(child: Node)
 		# NOTE Do nothing here, only DirectoryNode will implement this method
@@ -44,7 +45,7 @@ export abstract class Node
 		elseif this.type == NodeType.Renamed
 			this.Rename(this.name_before_rename)
 			this.type = NodeType.Deleted
-		elseif this.type == NodeType.NewFile
+		elseif this.type == NodeType.NewFile || this.type == NodeType.Copy
 			this.node_parent.RemoveChild(this)
 		else
 			throw "Type " .. this.type .. "not supported to delete."
@@ -59,6 +60,8 @@ export abstract class Node
 			return this.name .. ' (Deleted)'
 		elseif this.type == NodeType.Renamed
 			return this.name .. ' (Renamed)'
+		elseif this.type == NodeType.Copy
+			return this.name .. ' (Copy)'
 		else 
 			return this.name
 		endif
@@ -72,6 +75,8 @@ export abstract class Node
 			prop_add(singleton.lnum - 1, 1, {type: 'SupraTreeNewFileProp', length: len(getline(singleton.lnum - 1)), bufnr: singleton.buf})
 		elseif this.type == NodeType.Renamed
 			prop_add(singleton.lnum - 1, 1, {type: 'SupraTreeRenamedProp', length: len(getline(singleton.lnum - 1)), bufnr: singleton.buf})
+		elseif this.type == NodeType.Copy
+			prop_add(singleton.lnum - 1, 1, {type: 'SupraTreeCopyProp', length: len(getline(singleton.lnum - 1)), bufnr: singleton.buf})
 		endif
 	enddef
 
@@ -85,7 +90,7 @@ export abstract class Node
 			throw "File name cannot be empty."
 		endif
 		# The file name cannot contain invalid characters
-		if !(new_name =~# '\v^[a-zA-Z0-9._- ]+$')
+		if !(new_name =~# '\v^[-a-zA-Z0-9._ ]+$')
 			throw "Invalid file name."
 		endif
 		if this.type == NodeType.SimpleFile
@@ -127,7 +132,18 @@ export abstract class Node
 			else
 				modified.Append_NewFile(full_path)
 			endif
+		elseif this.type == NodeType.Copy
+			if this.GetKlassType() == 'Dir'
+				modified.Append_CopiedDirectory(this.copy_of, full_path)
+			else
+				modified.Append_CopiedFile(this.copy_of, full_path)
+			endif
 		endif
+	enddef
+
+	def MarkAsCopied(path: string)
+		this.copy_of = path
+		this.type = NodeType.Copy
 	enddef
 
 	abstract def Draw(is_end: bool = false)

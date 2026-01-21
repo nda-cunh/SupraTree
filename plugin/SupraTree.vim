@@ -21,10 +21,12 @@ g:SupraTreeDarkenAmount = 22
 hi SupraTreeDeleted ctermfg=9 guifg=#f44444 guibg=NONE
 hi SupraTreeNewFile ctermfg=10 guifg=#48BF84 guibg=NONE
 hi SupraTreeRenamed ctermfg=14 guifg=#48A8BF guibg=NONE
+hi SupraTreeCopy ctermfg=13 guifg=#ab3db9 guibg=NONE
 
 prop_type_add('SupraTreeDeletedProp', {highlight: 'SupraTreeDeleted', priority: 5060})
 prop_type_add('SupraTreeNewFileProp', {highlight: 'SupraTreeNewFile', priority: 5060})
 prop_type_add('SupraTreeRenamedProp', {highlight: 'SupraTreeRenamed', priority: 5060})
+prop_type_add('SupraTreeCopyProp', {highlight: 'SupraTreeCopy', priority: 5060})
 
 augroup SupraTree
 	autocmd!
