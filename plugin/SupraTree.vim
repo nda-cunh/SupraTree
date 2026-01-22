@@ -31,6 +31,16 @@ command! SupraTreeOpen    Tree.OpenTree()
 command! SupraTreeClose   Tree.CloseTree()
 command! SupraTreeRefresh Tree.RefreshTree()
 
+hi SupraTreeGitAdded ctermfg=10 guifg=#48BF84 guibg=NONE
+hi SupraTreeGitModified ctermfg=14 guifg=#48A8BF guibg=NONE
+hi SupraTreeGitDeleted ctermfg=9 guifg=#f44444 guibg=NONE
+hi SupraTreeGitRenamed ctermfg=14 guifg=#48A8BF guibg=NONE
+
+sign define SupraTreeGitModified     text=~ texthl=SupraTreeGitModified
+sign define SupraTreeGitAdded   text=+ texthl=SupraTreeGitAdded
+sign define SupraTreeGitDeleted     text=- texthl=SupraTreeGitDeleted
+sign define SupraTreeGitRenamed	 text=r texthl=SupraTreeGitModified
+
 hi SupraTreeDeleted ctermfg=9 guifg=#f44444 guibg=NONE
 hi SupraTreeNewFile ctermfg=10 guifg=#48BF84 guibg=NONE
 hi SupraTreeRenamed ctermfg=14 guifg=#48A8BF guibg=NONE
@@ -50,6 +60,7 @@ augroup SupraTree
 	autocmd WinClosed * call Tree.WhenClosingWindow()
 	autocmd BufEnter * call Tree.CheckNeedClose()
 	autocmd ColorScheme * call DarkenColor.Create_HiColor()
+	autocmd BufWritePost * if exists('g:supra_tree') | g:supra_tree.GitRefresh() | endif
 augroup END
 
 DarkenColor.Create_HiColor()

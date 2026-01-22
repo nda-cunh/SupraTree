@@ -14,6 +14,7 @@ export abstract class Node
 	public var depth: number
 	public var node_parent: Node 
 	public var is_last: bool = false
+	var line_number: number = -1
 	var name_before_rename: string
 	var copy_of: string
 
@@ -158,6 +159,14 @@ export abstract class Node
 	def MarkAsCopied(path: string)
 		this.copy_of = path
 		this.type = NodeType.Copy
+	enddef
+
+	def SetLineNumber(lnum: number)
+		this.line_number = lnum
+	enddef
+
+	def GetLineNumber(): number
+		return this.line_number
 	enddef
 
 	abstract def Draw(is_end: bool = false)

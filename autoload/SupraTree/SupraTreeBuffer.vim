@@ -1,15 +1,15 @@
 vim9script
 
-import autoload './Toggle.vim' as Toggle
-import autoload './Input.vim' as Popup
-import autoload './Utils.vim' as Utils
-import autoload './Node.vim' as ANode
-import autoload './SpecialNode.vim' as ASpecialNode
 import autoload './DirectoryNode.vim' as ADirectoryNode
 import autoload './FileNode.vim' as AFileNode
-import autoload './NodeType.vim' as NodeType
+import autoload './Input.vim' as Popup
 import autoload './Modified.vim' as AModified
+import autoload './Node.vim' as ANode
+import autoload './NodeType.vim' as NodeType
 import autoload './PopupSave.vim' as PopupSave
+import autoload './SpecialNode.vim' as ASpecialNode
+import autoload './Toggle.vim' as Toggle
+import autoload './Utils.vim' as Utils
 
 type Input = Popup.Input
 type Node = ANode.Node
@@ -26,6 +26,7 @@ export class SupraTreeBuffer
 	var icon_work: bool
 	var general_node: DirectoryNode
 	var clipboard: list<Node> = []
+	var hashtable: dict<Node> = {}
 
 	def new()
 		const buf = bufadd('SupraTree')
@@ -72,8 +73,11 @@ export class SupraTreeBuffer
 		nnoremap <buffer> yy				<scriptcmd>b:supra_tree.OnYank(false)<cr>
 		vnoremap <buffer> y				<esc><scriptcmd>b:supra_tree.OnYank(true)<cr>
 
-		au BufWriteCmd <buffer>		if exists('b:supra_tree')	| b:supra_tree.SaveActions() | endif
-		au BufWipeout <buffer>		SupraTreeBuffer.Quit()
+		augroup SupraTreeBuffer
+			autocmd!
+			au BufWriteCmd <buffer>		if exists('b:supra_tree')	| b:supra_tree.SaveActions() | endif
+			au BufWipeout <buffer>		SupraTreeBuffer.Quit()
+		augroup END
 
 		this.buf = buf
 		this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
@@ -135,20 +139,82 @@ export class SupraTreeBuffer
 		call setbufline(this.buf, 1, [])
 		call deletebufline(this.buf, 1, '$')
 		this.DrawHeader(getcwd())
-		this.general_node.DrawChilds()
+		# this.general_node.DrawChilds()
+		this.general_node.Draw(true)
 		# test if the function exist
 		if exists('g:supratree_icons_glyph_palette_func')
 			silent! call(g:supratree_icons_glyph_palette_func, [])
 		endif
 		setbufvar(this.buf, '&modified', 0)
 		setbufvar(this.buf, '&modifiable', 0)
+
+		this.hashtable = {}
+		#### Git support add sign to the lines
+		for nb in range(1, line('$'))
+			const node = this.table_actions[nb - 1]
+			const full_path = node.GetFullPath()
+			if full_path == '' || full_path == '/'
+				continue
+			endif
+			this.hashtable[full_path] = node
+		endfor
+		this.GitRefresh()
 	enddef
 
+	def GitRefresh()
+		if this.hashtable == {}
+			return
+		endif
+
+		sign_unplace('SupraTreeGitGroup', {buffer: this.buf})
+
+		# Todo change it by the futur variable root_path 
+		const root = getcwd() 
+
+		job_start(['git', 'status', '--porcelain'], {
+			out_cb: (channel, msg) => {
+				if len(msg) < 4 | return | endif
+
+				var status = msg[: 1]
+				var path_part = msg[3 :]
+
+				if status =~ 'R' || status =~ 'C'
+					path_part = split(path_part, ' -> ')[1]
+				endif
+
+				const full_path = root .. '/' .. path_part
+
+				if has_key(this.hashtable, full_path)
+					const node = this.hashtable[full_path]
+					this.ApplySignToNode(node, status)
+				endif
+			}})
+	enddef
+
+	def ApplySignToNode(node: Node, status: string)
+		var sign_name: string
+		if status == ' M'
+			sign_name = 'SupraTreeGitModified'
+		elseif status == 'A ' || status == '??'
+			sign_name = 'SupraTreeGitAdded'
+		elseif status == 'D '
+			sign_name = 'SupraTreeGitDeleted'
+		elseif status == 'R '
+			sign_name = 'SupraTreeGitRenamed'
+		elseif status == 'C '
+			sign_name = 'SupraTreeGitCopied'
+		else
+			return
+		endif
+
+		sign_place(0, 'SupraTreeGitGroup', sign_name, this.buf, {lnum: node.GetLineNumber()})
+	enddef
 
 	#######################################################
 	# Save Actions  (called on BufWriteCmd) or with <C-S>
 	#######################################################
 	def SaveActions()
+		try
 		var modified = Modified.new()
 
 		this.general_node.GetAllSaveActions(modified)
@@ -167,6 +233,11 @@ export class SupraTreeBuffer
 		SavePopup.OnCancel(() => {
 			this.RefreshWithOpenedDirs(modified.GetOpenedDirectories())
 		})
+		catch
+			echohl ErrorMsg
+			echo 'SupraTree Save Error: ' .. v:exception
+			echohl None
+		endtry
 	enddef
 
 	# draw the tree header
@@ -179,12 +250,12 @@ export class SupraTreeBuffer
 		this.NewAddLine(path .. '/', SpecialNode.new('ChangePath'))
 		this.NewAddLine('', SpecialNode.new('null'))
 		this.NewAddLine(Utils.GetIcons('', 2) .. ' ../', SpecialNode.new('prev'))
-		# this.NewAddLine(, this.general_node)
 	enddef
 
 	def NewAddLine(line: string, node: Node)
 		setbufline(this.buf, this.lnum, line)
 		add(this.table_actions, node)
+		node.SetLineNumber(this.lnum)
 		this.lnum += 1
 	enddef
 
@@ -358,6 +429,7 @@ export class SupraTreeBuffer
 	enddef
 			
 	def OnPaste()
+		try
 		if len(this.clipboard) == 0
 			throw "Clipboard is empty."
 		endif
@@ -397,13 +469,17 @@ export class SupraTreeBuffer
 
 		this.RefreshKeepPos()
 		echo 'Pasted ' .. len(this.clipboard) .. ' items from clipboard.'
+		catch
+			echohl ErrorMsg
+			echo 'SupraTree Paste Error: ' .. v:exception
+			echohl None
+		endtry
 	enddef
 
 	def OnClick(type: Toggle.Type)
 		const node = this.table_actions[line('.') - 1]
 		node.Action(type)
 	enddef
-
 endclass
 
 
