@@ -21,12 +21,9 @@ export abstract class Node
 	def AddChild(child: Node)
 		# NOTE Do nothing here, only DirectoryNode will implement this method
 	enddef
+
 	def RemoveChild(child: Node)
 		# NOTE Do nothing here, only DirectoryNode will implement this method
-	enddef
-
-	def GetKlassType(): string
-		return 'Node'
 	enddef
 
 	def GetPrefixLine(): string
@@ -114,7 +111,7 @@ export abstract class Node
 	enddef
 
 	def GetAllSaveActions(modified: Modified)
-		const full_path = this.parent .. '/' .. this.name
+		const full_path = this.GetFullPath()
 		var is_dir = false
 		if this.GetKlassType() == 'Dir'
 			is_dir = true
@@ -169,6 +166,7 @@ export abstract class Node
 		return this.line_number
 	enddef
 
+	abstract def GetKlassType(): string
 	abstract def Draw(is_end: bool = false)
 	abstract def Action(type: Toggle.Type)
 endclass

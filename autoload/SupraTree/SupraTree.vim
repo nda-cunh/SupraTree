@@ -87,6 +87,11 @@ export def OpenWindow()
 	else
 		execute 'noautocmd rightbelow vertical :new'
 	endif
+	var winid = win_getid()
+	setwinvar(winid, '&winfixwidth', 1)
+	setwinvar(winid, '&winfixheight', 1) # Sécurité additionnelle
+	setwinvar(winid, '&list', 0)         # Désactive les caractères invisibles juste ici
+	#block the rotate of the window with ctrl+w+r
 
 	# Set the width of the window
 	execute ':' .. size .. ' wincmd |'

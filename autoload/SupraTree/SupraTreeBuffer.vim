@@ -11,6 +11,7 @@ import autoload './SpecialNode.vim' as ASpecialNode
 import autoload './Toggle.vim' as Toggle
 import autoload './Utils.vim' as Utils
 
+
 type Input = Popup.Input
 type Node = ANode.Node
 type SpecialNode = ASpecialNode.SpecialNode
@@ -140,7 +141,7 @@ export class SupraTreeBuffer
 		call deletebufline(this.buf, 1, '$')
 		this.DrawHeader(getcwd())
 		# this.general_node.DrawChilds()
-		this.general_node.Draw(true)
+		this.general_node.DrawChilds()
 		# test if the function exist
 		if exists('g:supratree_icons_glyph_palette_func')
 			silent! call(g:supratree_icons_glyph_palette_func, [])
@@ -242,7 +243,7 @@ export class SupraTreeBuffer
 
 	# draw the tree header
 	def DrawHeader(pwd: string)
-		const path = substitute(pwd, '^' .. $HOME, '~', '')
+		const path = fnamemodify(pwd, ':~')
 		this.icon_work = Utils.TestIfIconsWork()
 		this.lnum = 1
 		this.table_actions = []
@@ -266,18 +267,21 @@ export class SupraTreeBuffer
 	def OnNewFile(is_up: bool)
 		const current_lnum = line('.')
 		const target_lnum = is_up ? current_lnum - 1 : current_lnum
-
-		var index = current_lnum + (is_up == true ? -1 : 0)
-		var test_node: Node = this.table_actions[index - 1]
 		var node_parent: Node
-		if test_node->instanceof(DirectoryNode) == true
-			node_parent = test_node
-		else
-			node_parent = test_node.GetParent()
-		endif
-		if node_parent->instanceof(SpecialNode)
-			throw "Cannot create a new file here."
-		endif
+		{
+
+			var index = current_lnum + (is_up == true ? -1 : 0)
+			var test_node: Node = this.table_actions[index - 1]
+			if test_node->instanceof(DirectoryNode) == true
+				node_parent = test_node
+			else
+				node_parent = test_node.GetParent()
+			endif
+
+			if node_parent->instanceof(SpecialNode)
+				node_parent = this.general_node
+			endif
+		}
 
 		setbufvar(this.buf, '&modifiable', 1)
 
@@ -370,37 +374,21 @@ export class SupraTreeBuffer
 		})
 	enddef
 
+	def OnYank(visual: bool)
+		this.OnVisual(visual, (node) => {
+			# do nothing for yank
+		})
+		echo 'Yanked ' .. len(this.clipboard) .. ' items to clipboard.'
+	enddef
+
 	def OnRemove(visual: bool)
-		const lnum = line('.')
-		const e = &filetype
-		var min: number
-		var max: number
-		if visual
-			min = getpos("'<")[1]
-			max = getpos("'>")[1]
-		else
-			min = line('.')
-			if exists('v:count') && v:count != 0
-				max = min + v:count - 1
-			else
-				max = min
-			endif
-		endif
-
-		if max > line('$')
-			max = line('$')
-		endif
-	
-		for nb in range(min, max)
-			const node = this.table_actions[nb - 1]
+		this.OnVisual(visual, (node) => {
 			node.SetDeleted()
-		endfor
-
+		})
 		this.RefreshKeepPos()
 	enddef
 
-	# work like OnRemove for visual clip
-	def OnYank(visual: bool)
+	def OnVisual(visual: bool, Func: func(Node): void)
 		const lnum = line('.')
 		const e = &filetype
 		var min: number
@@ -424,8 +412,8 @@ export class SupraTreeBuffer
 		for nb in range(min, max)
 			const node = this.table_actions[nb - 1]
 			add(this.clipboard, node)
+			Func(node)
 		endfor
-		echo 'Yanked ' .. len(this.clipboard) .. ' items to clipboard.'
 	enddef
 			
 	def OnPaste()
@@ -448,14 +436,26 @@ export class SupraTreeBuffer
 
 		for node in this.clipboard
 			var new_node: Node
-			var try_i = 1
-			while try_i != 500
+			var try_i = 0
+			while try_i != 200
 				try
-					var new_name = node.name .. "_copy_" .. try_i
-					if node->instanceof(DirectoryNode) == true
-						new_node = DirectoryNode.new(node.parent, new_name, NodeType.Copy, node_parent.depth + 1)
+					var ext = fnamemodify(node.name, ':e')
+					var new_name: string
+					if try_i != 0
+						new_name = fnamemodify(node.name, ':r') .. '_copy' .. try_i
+						if ext != ''
+							new_name ..= '.' .. ext
+						endif
 					else
-						new_node = FileNode.new(node.parent, new_name, NodeType.Copy, node_parent.depth + 1)
+						new_name = node.name
+					endif
+	
+					var new_dest = node_parent.GetFullPath()
+
+					if node->instanceof(DirectoryNode) == true
+						new_node = DirectoryNode.new(new_dest, new_name, NodeType.Copy, node_parent.depth + 1)
+					else
+						new_node = FileNode.new(new_dest, new_name, NodeType.Copy, node_parent.depth + 1)
 					endif
 					node_parent.AddChild(new_node)
 					new_node.MarkAsCopied(node.GetFullPath())
