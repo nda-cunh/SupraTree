@@ -56,30 +56,48 @@ export class SupraTreeBuffer
 		setbufvar(buf, '&winminwidth', 10)
 		setbufvar(buf, '&wincolor', 'TreeNormalDark')
 		setbufvar(buf, '&filetype', 'SupraTree')
-
-
-		nnoremap <buffer> <cr>				<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		nnoremap <buffer> <c-t>				<scriptcmd>b:supra_tree.OnClick(Toggle.NewTab)<cr>
-		nnoremap <buffer> <c-h>				<scriptcmd>b:supra_tree.OnClick(Toggle.Split)<cr>
-		nnoremap <buffer> <c-v>				<scriptcmd>b:supra_tree.OnClick(Toggle.VSplit)<cr>
-		nnoremap <buffer> -					<scriptcmd>b:supra_tree.OnBack()<cr>
-		nnoremap <buffer> <bs>				<scriptcmd>b:supra_tree.OnBack()<cr>
-		nnoremap <buffer> <2-LeftMouse>		<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		nnoremap <buffer> <3-LeftMouse>		<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		nnoremap <buffer> <4-LeftMouse>		<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		nnoremap <buffer> <c-]>				<scriptcmd>b:supra_tree.OnRightClick()<cr>
-		nnoremap <buffer> <2-RightMouse>	<scriptcmd>b:supra_tree.OnRightClick(true)<cr>
-		nnoremap <buffer> <3-RightMouse>	<scriptcmd>b:supra_tree.OnRightClick(true)<cr>
-		nnoremap <buffer> <c-s>				<scriptcmd>b:supra_tree.SaveActions()<cr>
-		nnoremap <buffer> r 				<scriptcmd>b:supra_tree.RefreshFileSystem()<cr>
-		nnoremap <buffer> dd				<scriptcmd>b:supra_tree.OnRemove(false)<cr>
-		vnoremap <buffer> d					<esc><scriptcmd>b:supra_tree.OnRemove(true)<cr>
-		nnoremap <buffer> i					<scriptcmd>b:supra_tree.OnRename()<cr>
-		nnoremap <buffer> O 				<scriptcmd>b:supra_tree.OnNewFile(true)<cr>
-		nnoremap <buffer> o 				<scriptcmd>b:supra_tree.OnNewFile(false)<cr>
-		nnoremap <buffer> p					<scriptcmd>b:supra_tree.OnPaste()<cr>
-		nnoremap <buffer> yy				<scriptcmd>b:supra_tree.OnYank(false)<cr>
-		vnoremap <buffer> y					<esc><scriptcmd>b:supra_tree.OnYank(true)<cr>
+		
+		# --- Navigation & Opening ---
+		nnoremap <buffer> <cr>          <scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <c-t>         <scriptcmd>b:supra_tree.OnClick(Toggle.NewTab)<cr>
+		nnoremap <buffer> <c-h>         <scriptcmd>b:supra_tree.OnClick(Toggle.Split)<cr>
+		nnoremap <buffer> <c-v>         <scriptcmd>b:supra_tree.OnClick(Toggle.VSplit)<cr>
+		nnoremap <buffer> W			 	<scriptcmd>b:supra_tree.CloseAllDirs()<cr>
+		
+		# --- Tree Traversal ---
+		nnoremap <buffer> -             <scriptcmd>b:supra_tree.OnBack()<cr>
+		nnoremap <buffer> <bs>          <scriptcmd>b:supra_tree.OnBack()<cr>
+		nnoremap <buffer> P             <scriptcmd>b:supra_tree.JumpToParent()<cr>
+		nnoremap <buffer> >             <scriptcmd>b:supra_tree.JumpToSibling(1)<cr>
+		nnoremap <buffer> <             <scriptcmd>b:supra_tree.JumpToSibling(-1)<cr>
+		nnoremap <buffer> }             <scriptcmd>b:supra_tree.JumpToSibling(1)<cr>
+		nnoremap <buffer> {             <scriptcmd>b:supra_tree.JumpToSibling(-1)<cr>
+		
+		# --- Rapid Jumps (First/Last Sibling) ---
+		nmap <buffer> J                 Pj<
+		nmap <buffer> K                 Pj
+		
+		# --- File Operations (CRUD) ---
+		nnoremap <buffer> i             <scriptcmd>b:supra_tree.OnRename()<cr>
+		nnoremap <buffer> o             <scriptcmd>b:supra_tree.OnNewFile(false)<cr>
+		nnoremap <buffer> O             <scriptcmd>b:supra_tree.OnNewFile(true)<cr>
+		nnoremap <buffer> dd            <scriptcmd>b:supra_tree.OnRemove(false)<cr>
+		vnoremap <buffer> d             <esc><scriptcmd>b:supra_tree.OnRemove(true)<cr>
+		
+		# --- Clipboard & System ---
+		nnoremap <buffer> yy            <scriptcmd>b:supra_tree.OnYank(false)<cr>
+		vnoremap <buffer> y             <esc><scriptcmd>b:supra_tree.OnYank(true)<cr>
+		nnoremap <buffer> p             <scriptcmd>b:supra_tree.OnPaste()<cr>
+		nnoremap <buffer> <c-s>         <scriptcmd>b:supra_tree.SaveActions()<cr>
+		nnoremap <buffer> r             <scriptcmd>b:supra_tree.RefreshFileSystem()<cr>
+		
+		# --- Mouse Support ---
+		nnoremap <buffer> <2-LeftMouse>  <scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <3-LeftMouse>  <scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <4-LeftMouse>  <scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <c-]>          <scriptcmd>b:supra_tree.OnRightClick()<cr>
+		nnoremap <buffer> <2-RightMouse> <scriptcmd>b:supra_tree.OnRightClick(true)<cr>
+		nnoremap <buffer> <3-RightMouse> <scriptcmd>b:supra_tree.OnRightClick(true)<cr>
 
 		augroup SupraTreeBuffer
 			autocmd!
@@ -269,7 +287,62 @@ export class SupraTreeBuffer
 		this.RefreshFileSystem()
 	enddef
 
+	def CloseAllDirs()
+		this.general_node.Close()
+		this.general_node.Open()
+	enddef
 
+	def JumpToParent()
+		const current_lnum = line('.')
+		const current_node = this.table_actions[current_lnum - 1]
+		const parent_node = current_node.GetParent()
+
+		if parent_node.GetFullPath() == this.general_node.GetFullPath()
+			search('\.\.\/')
+		else
+			cursor(parent_node.GetLineNumber(), 1)
+			normal! zz
+		endif
+	enddef
+
+	def JumpToSibling(direction: number)
+		const total_lines = len(this.table_actions)
+		if total_lines <= 1
+			return
+		endif
+
+		var current_lnum = line('.')
+		var current_node = this.table_actions[current_lnum - 1]
+		var target_depth = current_node.depth
+
+		var search_lnum = current_lnum + direction
+		var attempts = 0
+
+		while attempts < total_lines
+			if search_lnum > total_lines
+				search_lnum = 1
+			elseif search_lnum < 1
+				search_lnum = total_lines
+			endif
+
+			var next_node = this.table_actions[search_lnum - 1]
+
+			if next_node->instanceof(SpecialNode)
+				search_lnum += direction
+				attempts += 1
+				continue
+			endif
+
+			if next_node.depth == target_depth
+				cursor(search_lnum, 0)
+				normal! zz 
+				return
+			endif
+
+			search_lnum += direction
+			attempts += 1
+		endwhile
+	enddef
 	# draw the tree header
 	def DrawHeader(pwd: string)
 		const path = fnamemodify(pwd, ':~')

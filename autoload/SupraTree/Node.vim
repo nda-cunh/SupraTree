@@ -12,7 +12,7 @@ export abstract class Node
 	public var name: string
 	public var type: NodeType.NodeType
 	public var depth: number
-	public var node_parent: Node 
+	public var node_parent: Node
 	public var is_last: bool = false
 	var line_number: number = -1
 	var name_before_rename: string
