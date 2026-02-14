@@ -35,6 +35,9 @@ export abstract class Node
 		return this.node_parent
 	enddef
 
+	def UpdateDepth(new_depth: number)
+	enddef
+
 	def SetDeleted()
 		if this.type == NodeType.SimpleFile
 			this.type = NodeType.Deleted

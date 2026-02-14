@@ -8,6 +8,7 @@ import autoload './Node.vim' as ANode
 import autoload './NodeType.vim' as NodeType
 import autoload './PopupSave.vim' as PopupSave
 import autoload './SpecialNode.vim' as ASpecialNode
+import autoload './SpecialNodePrev.vim' as ASpecialNodePrev
 import autoload './Toggle.vim' as Toggle
 import autoload './Utils.vim' as Utils
 
@@ -15,17 +16,18 @@ import autoload './Utils.vim' as Utils
 type Input = Popup.Input
 type Node = ANode.Node
 type SpecialNode = ASpecialNode.SpecialNode
+type SpecialNodePrev = ASpecialNodePrev.SpecialNodePrev
 type DirectoryNode = ADirectoryNode.DirectoryNode
 type FileNode = AFileNode.FileNode
 type Modified = AModified.Modified
 
 export class SupraTreeBuffer
+	public var general_node: DirectoryNode
 	var buf: number # Buffer number
 	var open_folders = [] # Contains the list of open folders
 	var lnum: number # Current line number to write
 	var table_actions: list<Node>
 	var icon_work: bool
-	var general_node: DirectoryNode
 	var clipboard: list<Node> = []
 	var hashtable: dict<Node> = {}
 
@@ -56,23 +58,28 @@ export class SupraTreeBuffer
 		setbufvar(buf, '&filetype', 'SupraTree')
 
 
-		nnoremap <buffer> <cr>			<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		nnoremap <buffer> <c-t>			<scriptcmd>b:supra_tree.OnClick(Toggle.NewTab)<cr>
-		nnoremap <buffer> <c-h>			<scriptcmd>b:supra_tree.OnClick(Toggle.Split)<cr>
-		nnoremap <buffer> <c-v>			<scriptcmd>b:supra_tree.OnClick(Toggle.VSplit)<cr>
-		nnoremap <buffer> <2-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		nnoremap <buffer> <3-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		nnoremap <buffer> <4-LeftMouse>	<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		nnoremap <buffer> <c-s>			<scriptcmd>b:supra_tree.SaveActions()<cr>
-		nnoremap <buffer> r 			<scriptcmd>b:supra_tree.RefreshFileSystem()<cr>
-		nnoremap <buffer> dd			<scriptcmd>b:supra_tree.OnRemove(false)<cr>
-		vnoremap <buffer> d				<esc><scriptcmd>b:supra_tree.OnRemove(true)<cr>
-		nnoremap <buffer> i				<scriptcmd>b:supra_tree.OnRename()<cr>
-		nnoremap <buffer> O 			<scriptcmd>b:supra_tree.OnNewFile(true)<cr>
-		nnoremap <buffer> o 			<scriptcmd>b:supra_tree.OnNewFile(false)<cr>
-		nnoremap <buffer> p				<scriptcmd>b:supra_tree.OnPaste()<cr>
+		nnoremap <buffer> <cr>				<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <c-t>				<scriptcmd>b:supra_tree.OnClick(Toggle.NewTab)<cr>
+		nnoremap <buffer> <c-h>				<scriptcmd>b:supra_tree.OnClick(Toggle.Split)<cr>
+		nnoremap <buffer> <c-v>				<scriptcmd>b:supra_tree.OnClick(Toggle.VSplit)<cr>
+		nnoremap <buffer> -					<scriptcmd>b:supra_tree.OnBack()<cr>
+		nnoremap <buffer> <bs>				<scriptcmd>b:supra_tree.OnBack()<cr>
+		nnoremap <buffer> <2-LeftMouse>		<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <3-LeftMouse>		<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <4-LeftMouse>		<scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
+		nnoremap <buffer> <c-]>				<scriptcmd>b:supra_tree.OnRightClick()<cr>
+		nnoremap <buffer> <2-RightMouse>	<scriptcmd>b:supra_tree.OnRightClick(true)<cr>
+		nnoremap <buffer> <3-RightMouse>	<scriptcmd>b:supra_tree.OnRightClick(true)<cr>
+		nnoremap <buffer> <c-s>				<scriptcmd>b:supra_tree.SaveActions()<cr>
+		nnoremap <buffer> r 				<scriptcmd>b:supra_tree.RefreshFileSystem()<cr>
+		nnoremap <buffer> dd				<scriptcmd>b:supra_tree.OnRemove(false)<cr>
+		vnoremap <buffer> d					<esc><scriptcmd>b:supra_tree.OnRemove(true)<cr>
+		nnoremap <buffer> i					<scriptcmd>b:supra_tree.OnRename()<cr>
+		nnoremap <buffer> O 				<scriptcmd>b:supra_tree.OnNewFile(true)<cr>
+		nnoremap <buffer> o 				<scriptcmd>b:supra_tree.OnNewFile(false)<cr>
+		nnoremap <buffer> p					<scriptcmd>b:supra_tree.OnPaste()<cr>
 		nnoremap <buffer> yy				<scriptcmd>b:supra_tree.OnYank(false)<cr>
-		vnoremap <buffer> y				<esc><scriptcmd>b:supra_tree.OnYank(true)<cr>
+		vnoremap <buffer> y					<esc><scriptcmd>b:supra_tree.OnYank(true)<cr>
 
 		augroup SupraTreeBuffer
 			autocmd!
@@ -120,7 +127,8 @@ export class SupraTreeBuffer
 
 	def RefreshWithOpenedDirs(opened_dirs: list<string>)
 		t:OpenedDirs = opened_dirs
-		this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
+		var path = this.general_node.GetFullPath()
+		this.general_node = DirectoryNode.new(path, '', NodeType.SimpleFile, -1)
 		this.general_node.Open()
 		unlet t:OpenedDirs
 		this.RefreshKeepPos()
@@ -139,7 +147,7 @@ export class SupraTreeBuffer
 		# clear the buffer
 		call setbufline(this.buf, 1, [])
 		call deletebufline(this.buf, 1, '$')
-		this.DrawHeader(getcwd())
+		this.DrawHeader(this.general_node.GetFullPath())
 		# this.general_node.DrawChilds()
 		this.general_node.DrawChilds()
 		# test if the function exist
@@ -170,7 +178,7 @@ export class SupraTreeBuffer
 		sign_unplace('SupraTreeGitGroup', {buffer: this.buf})
 
 		# Todo change it by the futur variable root_path 
-		const root = getcwd() 
+		const root = this.general_node.GetFullPath()
 
 		job_start(['git', 'status', '--porcelain'], {
 			out_cb: (channel, msg) => {
@@ -241,6 +249,27 @@ export class SupraTreeBuffer
 		endtry
 	enddef
 
+	# search in dict if the path exist if exist general_node become the node
+	# of the path else create a new node with the path and set it as
+	# general_node
+	def ChangeRoot(new_path: string)
+		if has_key(this.hashtable, new_path)
+			# check if the node is a directory if not create a new node with the path
+			const node = this.hashtable[new_path]
+			if node->instanceof(DirectoryNode) == true
+				this.general_node = <DirectoryNode>node
+				this.general_node.UpdateDepth(-1)
+			else
+				# get the parent of the node
+				const parent = node.GetParent()
+				this.general_node = <DirectoryNode>parent
+				this.general_node.UpdateDepth(-1)
+			endif
+		endif
+		this.RefreshFileSystem()
+	enddef
+
+
 	# draw the tree header
 	def DrawHeader(pwd: string)
 		const path = fnamemodify(pwd, ':~')
@@ -248,9 +277,9 @@ export class SupraTreeBuffer
 		this.lnum = 1
 		this.table_actions = []
 
-		this.NewAddLine(path .. '/', SpecialNode.new('ChangePath'))
+		this.NewAddLine(path, SpecialNode.new('ChangePath'))
 		this.NewAddLine('', SpecialNode.new('null'))
-		this.NewAddLine(Utils.GetIcons('', 2) .. ' ../', SpecialNode.new('prev'))
+		this.NewAddLine(Utils.GetIcons('', 2) .. ' ../', SpecialNodePrev.new())
 	enddef
 
 	def NewAddLine(line: string, node: Node)
@@ -479,6 +508,22 @@ export class SupraTreeBuffer
 	def OnClick(type: Toggle.Type)
 		const node = this.table_actions[line('.') - 1]
 		node.Action(type)
+	enddef
+
+	def OnBack()
+		var special = SpecialNodePrev.new()
+		special.Action(Toggle.Enter)
+	enddef
+
+	def OnRightClick(mouse: bool = false)
+		if mouse
+			var pos = getmousepos()
+
+			# On déplace le curseur à l'endroit du clic
+			win_execute(pos.winid, $'cursor({pos.line}, {pos.column})')
+		endif
+		const node = this.table_actions[line('.') - 1]
+		this.ChangeRoot(node.GetFullPath())
 	enddef
 endclass
 

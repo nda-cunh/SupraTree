@@ -120,6 +120,70 @@ export class DirectoryNode extends Node
 		endif
 	enddef
 
+	# Dans la classe Node
+	def UpdateDepth(new_depth: number)
+		this.depth = new_depth
+		# Si c'est un DirectoryNode, il faut aussi mettre à jour les enfants
+		if this->instanceof(DirectoryNode)
+			var dir = <DirectoryNode>this
+			for child in dir.children
+				child.UpdateDepth(new_depth + 1)
+			endfor
+		endif
+	enddef
+
+	def OpenInsertNode(node: Node)
+		this.is_open = true
+
+		# 1. On récupère le chemin du dossier parent (celui qu'on vient d'ouvrir avec ../)
+		var current_name = (this.type == NodeType.Renamed) ? this.name_before_rename : this.name
+		var full_path = simplify(this.parent .. '/' .. current_name .. '/')
+
+		# 2. On lit TOUS les fichiers du disque pour ce niveau
+		var disk_nodes = ReadAllNodes.GetCustomNodes(full_path, this.depth + 1)
+
+		# 3. On prépare la liste finale
+		var final_children: list<Node> = []
+		var target_path = simplify(node.GetFullPath())
+		# remove '/' at the end of target_path if exists
+		target_path = substitute(target_path, '[/\\]$', '', '')
+
+		for disk_node in disk_nodes
+			var disk_path = simplify(disk_node.GetFullPath())
+
+			# echom "Comparing disk path: " .. disk_path .. " with target path: " .. target_path
+			if disk_path == target_path
+				# --- CRUCIAL ---
+				# On ignore le disk_node (tout neuf, vide d'enfants)
+				# On insère ton 'node' (celui qui a déjà ses enfants et son état)
+				node.node_parent = this
+				final_children->add(node)
+				node.name = simplify(disk_node.name)
+				node.parent = simplify(this.GetFullPath())
+				node.UpdateDepth(this.depth + 1)
+			else
+				# Pour tous les autres (Android, Desktop, etc.)
+				disk_node.node_parent = this
+				final_children->add(disk_node)
+			endif
+		endfor
+
+		# 4. On remplace la liste d'enfants du parent par cette nouvelle liste mixée
+		this.children = final_children
+
+		# Mise à jour des drapeaux de dessin (branches)
+		for c in this.children | c.is_last = false | endfor
+		if !empty(this.children)
+			this.children[-1].is_last = true
+		endif
+
+		# 5. Pas besoin de récursion vers le bas si le 'node' est déjà peuplé,
+		# Sauf si tu as plusieurs niveaux de remonter à faire.
+	enddef
+
+
+
+	# Like Open but insert this Node
 	def Open()
 		if this.is_open == true
 			return

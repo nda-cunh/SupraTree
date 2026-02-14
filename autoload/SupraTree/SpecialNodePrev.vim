@@ -3,29 +3,34 @@ vim9script
 import autoload './Toggle.vim' as Toggle
 import autoload './SpecialNode.vim' as ASpecialNode
 import autoload './DirectoryNode.vim' as ADirectoryNode
+import autoload './NodeType.vim' as NodeType
 
 type DirectoryNode = ADirectoryNode.DirectoryNode
 type SpecialNode = ASpecialNode.SpecialNode
 
 export class SpecialNodePrev extends SpecialNode
-	var prev: DirectoryNode
-
-	def new(this.prev)
+	def new()
 		
 	enddef
 
-	# get the full path of the previous directory
-	# get the path before it ex:
-	# /Users/username/project/folder
-	# /Users/username/project
-	# Create a new node with /Users/username/project
-	# and this.prev need point to that new node
-	# Ignore type parameter
 	def Action(type: Toggle.Type)
-		var full_path = this.prev.GetFullPath()
-		var parent_path = fnamemodify(full_path, ':h')
-		var new_dir = DirectoryNode.new(this.prev.node_parent, fnamemodify(parent_path, ':t'), 'dir', this.prev.depth)
-		this.prev = new_dir
+		const singleton: any = g:supra_tree
+		var path = singleton.general_node.GetFullPath()
+		
+		if path == '' || path == '/' || path == '\\'
+			return
+		endif
 
+		var clean_path = substitute(path, '[/\\]$', '', '')
+    
+		var parent_path = simplify(fnamemodify(clean_path, ':h'))
+
+		var new_node = DirectoryNode.new(parent_path, '', NodeType.SimpleFile, -1)
+		# singleton
+		var last_node = singleton.general_node 
+		# last_node.name = fnamemodify(clean_path, ':t')
+		singleton.general_node = new_node
+		singleton.general_node.OpenInsertNode(last_node)
+		singleton.RefreshFileSystem()
 	enddef
 endclass
