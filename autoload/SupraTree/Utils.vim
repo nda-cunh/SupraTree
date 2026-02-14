@@ -35,3 +35,8 @@ export def GetPrefixLine(depth: number): string
 	endif
 	return '  ' .. repeat('│ ', depth - 1)
 enddef
+
+export def IsLeft(winid: number): bool
+    const pos = win_screenpos(winid)
+    return pos[1] == 1
+enddef

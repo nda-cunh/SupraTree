@@ -16,15 +16,16 @@ import autoload 'SupraTree/DarkenColor.vim' as DarkenColor
 noremap <c-g> 	<scriptcmd>Tree.ToggleTree()<cr>
 inoremap <c-g> 	<scriptcmd>Tree.ToggleTree()<cr>
 
-g:supratree_icons_glyph_func = 'g:WebDevIconsGetFileTypeSymbol'
-g:supratree_icons_glyph_palette_func = 'SupraIcons#Palette#Apply'
-g:supratree_filter_files = ['*.o', '*.class', '*.pyc', '*.exe', '*.dll', '*.so', '*.dylib']
-g:supratree_show_hidden = true 
-g:SupraTreeForceColor = ''
-g:SupraTreeDarkenAmount = 22
-g:SupraTreePosition = 'left'
-g:SupraTreeWidth = 26
-g:SupraTreeOpenOnStartup = true 
+g:supratree_icons_glyph_func         = get(g:, 'supratree_icons_glyph_func', 'g:WebDevIconsGetFileTypeSymbol')
+g:supratree_icons_glyph_palette_func = get(g:, 'supratree_icons_glyph_palette_func', 'SupraIcons#Palette#Apply')
+g:supratree_filter_files             = get(g:, 'supratree_filter_files', ['*.o', '*.class', '*.pyc', '*.exe', '*.dll', '*.so', '*.dylib'])
+g:supratree_show_hidden              = get(g:, 'supratree_show_hidden', true)
+g:supratree_force_color              = get(g:, 'supratree_force_color', '')
+g:supratree_darken_amount            = get(g:, 'supratree_darken_amount', 22)
+g:supratree_position                 = get(g:, 'supratree_position', 'left')
+g:supratree_width                    = get(g:, 'supratree_width', 26)
+g:supratree_open_on_startup          = get(g:, 'supratree_open_on_startup', true)
+g:supratree_sortascending            = get(g:, 'supratree_sortascending', true)
 
 command! SupraTreeToggle  Tree.ToggleTree()
 command! SupraTreeOpen    Tree.OpenTree()
@@ -53,13 +54,14 @@ prop_type_add('SupraTreeCopyProp', {highlight: 'SupraTreeCopy', priority: 5060})
 
 augroup SupraTree
 	autocmd!
-	if get(g:, 'SupraTreeOpenOnStartup', true) == true
+	if get(g:, 'supratree_open_on_startup', true) == true
 		autocmd VimEnter * call Tree.OpenTree()
 	endif
 	autocmd TabEnter * call Tree.OnTabEnter()
 	autocmd WinClosed * call Tree.WhenClosingWindow()
 	autocmd BufEnter * call Tree.CheckNeedClose()
 	autocmd ColorScheme * call DarkenColor.Create_HiColor()
+	autocmd WinResized * call Tree.OnResize()
 	autocmd BufWritePost * if exists('g:supra_tree') | g:supra_tree.GitRefresh() | endif
 augroup END
 

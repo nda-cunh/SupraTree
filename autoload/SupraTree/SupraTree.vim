@@ -54,9 +54,39 @@ export def OnTabEnter()
 	if value == true
 		timer_start(0, (_) => {
 			SupraTree#SupraTree#OpenWindow()
+			SupraTree#SupraTree#Resize()
 		})
 	else
 		SupraTree#SupraTree#CloseWindow()
+	endif
+enddef
+
+export def Resize()
+	if exists('t:supratree_winid')
+		if exists('g:supratree_width') != 0
+			const winid: number = t:supratree_winid
+			noautocmd win_execute(winid, 'vertical resize ' .. g:supratree_width)
+		endif
+	endif
+enddef
+
+export def Move()
+	if exists('t:supratree_winid')
+		const winid: number = t:supratree_winid
+		const is_left = SupraTree#Utils#IsLeft(winid)
+		if is_left && get(g:, 'supratree_position', 'left') == 'right'
+			noautocmd win_execute(winid, 'wincmd r')
+		elseif !is_left && get(g:, 'supratree_position', 'left') == 'left'
+			noautocmd win_execute(winid, 'wincmd r')
+		endif
+	endif
+enddef
+# Get the new width and set g:supratree_width to it
+export def OnResize()
+	if exists('t:supratree_winid')
+		const winid: number = t:supratree_winid
+		const width: number = winwidth(winid)
+		g:supratree_width = width
 	endif
 enddef
 
@@ -79,10 +109,10 @@ export def OpenWindow()
 		return
 	endif
 
-	const size = get(g:, 'SupraTreeWidth', 26)
+	const size = get(g:, 'supratree_width', 26)
 
 	# If the position is left, open a topleft vertical split
-	if get(g:, 'SupraTreePosition', 'left') == 'left'
+	if get(g:, 'supratree_position', 'left') == 'left'
 		execute 'noautocmd topleft vertical :new'
 	else
 		execute 'noautocmd rightbelow vertical :new'
