@@ -209,7 +209,7 @@ export class SupraTreeBuffer
 					path_part = split(path_part, ' -> ')[1]
 				endif
 
-				const full_path = root .. '/' .. path_part
+				const full_path = root .. path_part
 
 				if has_key(this.hashtable, full_path)
 					const node = this.hashtable[full_path]
