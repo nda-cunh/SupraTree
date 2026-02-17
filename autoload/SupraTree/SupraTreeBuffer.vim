@@ -186,7 +186,33 @@ export class SupraTreeBuffer
 			this.hashtable[full_path] = node
 		endfor
 		this.GitRefresh()
+		this.SvnRefresh()
 	enddef
+
+	def SvnRefresh()
+		if this.hashtable == {}
+			return
+		endif
+
+		sign_unplace('SupraTreeGitGroup', {buffer: this.buf})
+
+		const root = this.general_node.GetFullPath()
+
+		job_start(['svn', 'status'], {
+			out_cb: (channel, msg) => {
+				if len(msg) < 4 | return | endif
+				var status = msg[0]
+				var path_part = msg[8 :]
+
+				const full_path = root .. path_part
+
+				if has_key(this.hashtable, full_path)
+					const node = this.hashtable[full_path]
+					this.ApplySignToNode(node, status, 1)
+				endif
+			}})
+	enddef
+
 
 	def GitRefresh()
 		if this.hashtable == {}
@@ -195,7 +221,6 @@ export class SupraTreeBuffer
 
 		sign_unplace('SupraTreeGitGroup', {buffer: this.buf})
 
-		# Todo change it by the futur variable root_path 
 		const root = this.general_node.GetFullPath()
 
 		job_start(['git', 'status', '--porcelain'], {
@@ -213,25 +238,38 @@ export class SupraTreeBuffer
 
 				if has_key(this.hashtable, full_path)
 					const node = this.hashtable[full_path]
-					this.ApplySignToNode(node, status)
+					this.ApplySignToNode(node, status, 0)
 				endif
 			}})
 	enddef
 
-	def ApplySignToNode(node: Node, status: string)
+	# 0 = git, 1 = svn
+	def ApplySignToNode(node: Node, status: string, mode: number)
 		var sign_name: string
-		if status == ' M'
-			sign_name = 'SupraTreeGitModified'
-		elseif status == 'A ' || status == '??'
-			sign_name = 'SupraTreeGitAdded'
-		elseif status == 'D '
-			sign_name = 'SupraTreeGitDeleted'
-		elseif status == 'R '
-			sign_name = 'SupraTreeGitRenamed'
-		elseif status == 'C '
-			sign_name = 'SupraTreeGitCopied'
-		else
-			return
+		if mode == 0
+			if status == ' M'
+				sign_name = 'SupraTreeGitModified'
+			elseif status == 'A ' || status == '??'
+				sign_name = 'SupraTreeGitAdded'
+			elseif status == 'D '
+				sign_name = 'SupraTreeGitDeleted'
+			elseif status == 'R '
+				sign_name = 'SupraTreeGitRenamed'
+			elseif status == 'C '
+				sign_name = 'SupraTreeGitCopied'
+			else
+				return
+			endif
+		elseif mode == 1
+			if status == 'M'
+				sign_name = 'SupraTreeGitModified'
+			elseif status == 'A' || status == '?'
+				sign_name = 'SupraTreeGitAdded'
+			elseif status == 'D'
+				sign_name = 'SupraTreeGitDeleted'
+			else
+				return
+			endif
 		endif
 
 		sign_place(0, 'SupraTreeGitGroup', sign_name, this.buf, {lnum: node.GetLineNumber()})
