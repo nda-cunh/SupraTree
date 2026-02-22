@@ -1,5 +1,9 @@
 vim9script
 
+if has('patch-9.1.0850') == 0
+	finish
+endif
+
 if !exists('*supraconfig#RegisterMany')
 	finish
 endif
