@@ -37,19 +37,19 @@ export class FileNode extends Node.Node
 	def Action(type: Toggle.Type)
 		wincmd p
 		const buf = bufnr('%')
-		const full_path = this.parent .. '/' .. this.name
+		const full_path = this.GetFullPath()
 		if type == Toggle.Enter
 			if getbufvar(buf, '&modified') == true
-				execute 'split ' .. fnameescape(full_path)
+				execute 'split ' .. full_path
 			else
-				execute 'edit ' .. fnameescape(full_path)
+				execute 'edit ' .. full_path
 			endif
 		elseif type == Toggle.Split
-			execute 'split ' .. fnameescape(full_path)
+			execute 'split ' .. full_path
 		elseif type == Toggle.VSplit
-			execute 'vsplit ' .. fnameescape(full_path)
+			execute 'vsplit ' .. full_path
 		elseif type == Toggle.NewTab
-			execute 'tabnew ' .. fnameescape(full_path)
+			execute 'tabnew ' .. full_path
 		endif
 	enddef
 endclass

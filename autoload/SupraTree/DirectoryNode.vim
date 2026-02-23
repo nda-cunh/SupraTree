@@ -230,7 +230,7 @@ export class DirectoryNode extends Node
 			throw "Error: Cannot open a new directory."
 		endif
 		if type == Toggle.NewTab
-			execute 'tabnew ' .. fnameescape(this.parent .. '/' .. this.name)
+			execute 'tabnew ' .. this.GetFullPath()
 		else
 			if this.is_open == false
 				this.Open()
