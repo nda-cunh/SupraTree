@@ -272,7 +272,11 @@ export class SupraTreeBuffer
 			endif
 		endif
 
-		sign_place(0, 'SupraTreeGitGroup', sign_name, this.buf, {lnum: node.GetLineNumber()})
+		const lnum = node.GetLineNumber()
+		const sn = sign_getplaced(this.buf, {lnum: lnum, group: '*'})
+		if empty(sn[0].signs) == 1
+			sign_place(0, 'SupraTreeGitGroup', sign_name, this.buf, {lnum: lnum})
+		endif
 	enddef
 
 	#######################################################
