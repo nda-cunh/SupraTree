@@ -1,3 +1,7 @@
+if !exists('g:loaded_airline')
+  finish
+endif
+
 function! airline#extensions#supratree#apply_active(...) abort
 	if (&ft ==# 'SupraTree') && a:2.active ==# '1'
 		call airline#extensions#supratree#configure_sections(a:1, a:2)
