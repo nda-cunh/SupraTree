@@ -8,6 +8,10 @@ if !exists('*supraconfig#RegisterMany')
 	finish
 endif
 
+import autoload '../autoload/SupraTree/SupraTree.vim' as Tree
+import autoload '../autoload/SupraTree/DarkenColor.vim' as Darken
+
+
 supraconfig#RegisterGroup('supratree', 'SupraTree file explorer settings')
 
 supraconfig#RegisterMany([
@@ -18,7 +22,7 @@ supraconfig#RegisterMany([
 		default: true,
 		lore: 'Display the file explorer on startup',
 		handler: (v) => {
-			g:supratree_open_on_startup = (v == 'true')
+			g:supratree_open_on_startup = v 
 		}
 	},
 	{
@@ -27,8 +31,8 @@ supraconfig#RegisterMany([
 		default: 26,
 		lore: 'Default width of the explorer window',
 		handler: (v) => {
-			g:supratree_width = str2nr($'{v}')
-			SupraTree#SupraTree#Resize()
+			g:supratree_width = v
+			Tree.Resize()
 		}
 	},
 	{
@@ -37,7 +41,7 @@ supraconfig#RegisterMany([
 		default: false,
 		lore: 'Show hidden files in the explorer',
 		handler: (v) => {
-			g:supratree_show_hidden = ($'{v}' == 'true')
+			g:supratree_show_hidden = v
 		}
 	},
 	{
@@ -46,7 +50,7 @@ supraconfig#RegisterMany([
 		default: true,
 		lore: 'Sort explorer files in ascending order',
 		handler: (v) => {
-			g:supratree_sortascending = ($'{v}' == 'true')
+			g:supratree_sortascending = v
 		}
 	},
 	{
@@ -56,7 +60,7 @@ supraconfig#RegisterMany([
 		lore: 'Percentage to darken the explorer background',
 		handler: (v: number) => {
 			g:supratree_darken_amount = v
-			SupraTree#DarkenColor#Create_HiColor()
+			Darken.Create_HiColor()
 		}
 	},
 	{
@@ -76,7 +80,7 @@ supraconfig#RegisterMany([
 		lore: 'Position of the explorer window (left or right)',
 		handler: (v) => {
 			g:supratree_position = v
-			SupraTree#SupraTree#Move()
+			Tree.Move()
 		}
 	}
 ])

@@ -10,8 +10,8 @@ endif
 
 g:loaded_supratree = 1
 
-import autoload 'SupraTree/SupraTree.vim' as Tree 
-import autoload 'SupraTree/DarkenColor.vim' as DarkenColor
+import autoload '../autoload/SupraTree/SupraTree.vim' as Tree 
+import autoload '../autoload/SupraTree/DarkenColor.vim' as DarkenColor
 
 noremap <c-g> 	<scriptcmd>Tree.ToggleTree()<cr>
 inoremap <c-g> 	<scriptcmd>Tree.ToggleTree()<cr>
