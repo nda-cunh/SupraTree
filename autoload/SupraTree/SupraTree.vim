@@ -10,7 +10,7 @@ export def OpenTree()
 enddef
 
 export def CloseTree()
-	g:supratree_isopen = false 
+	g:supratree_isopen = false
 	SupraTree#SupraTree#CloseWindow()
 enddef
 
@@ -22,7 +22,6 @@ export def ToggleTree()
 		SupraTree#SupraTree#OpenTree()
 	endif
 enddef
-
 
 export def CheckNeedClose()
 	var lst_tab = tabpagebuflist()
@@ -105,6 +104,7 @@ enddef
 
 # Just open a new window and load the SupraTree buffer
 export def OpenWindow()
+	const target_file = expand('%:p')
 	if exists('t:supratree_winid')
 		return
 	endif
@@ -119,26 +119,24 @@ export def OpenWindow()
 	endif
 	var winid = win_getid()
 	setwinvar(winid, '&winfixwidth', 1)
-	setwinvar(winid, '&winfixheight', 1) # Sécurité additionnelle
-	setwinvar(winid, '&list', 0)         # Désactive les caractères invisibles juste ici
-	#block the rotate of the window with ctrl+w+r
+	setwinvar(winid, '&winfixheight', 1)
+	setwinvar(winid, '&list', 0)
 
 	# Set the width of the window
 	execute ':' .. size .. ' wincmd |'
 
 	t:supratree_winid = win_getid()
-	if exists('g:supra_tree')	
+	if exists('g:supra_tree')
 		const tree: SupraTreeBuffer = g:supra_tree
 		const buf = tree.GetBuf()
 
 		execute 'b ' .. buf
 		if line('$', t:supratree_winid) < 3
-			# echom "SupraTree: Refreshing SupraTree Buffer..."
 			tree.Refresh()
 		endif
 	else
 		# Init The SupraTree Buffer
-		var instance = SupraTreeBuffer.new()
+		var instance = SupraTreeBuffer.new(target_file)
 		g:supra_tree = instance
 		b:supra_tree = instance
 	endif

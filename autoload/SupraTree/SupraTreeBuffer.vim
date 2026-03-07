@@ -31,7 +31,7 @@ export class SupraTreeBuffer
 	var clipboard: list<Node> = []
 	var hashtable: dict<Node> = {}
 
-	def new()
+	def new(target_file: string)
 		const buf = bufadd('SupraTree')
 		execute 'buffer ' .. buf
 		g:supra_tree = this
@@ -108,7 +108,27 @@ export class SupraTreeBuffer
 		this.buf = buf
 		this.general_node = DirectoryNode.new(getcwd(), '', NodeType.SimpleFile, -1)
 		this.general_node.Open()
-		this.Refresh()
+
+		SupraTreeBuffer.JumpToNode(target_file)
+	enddef
+
+	static def JumpToNode(file: string)
+		if !exists('g:supra_tree')
+			return
+		endif
+
+		const instance: SupraTreeBuffer = g:supra_tree
+		const general_node: DirectoryNode = instance.general_node
+		var full_target = fnamemodify(file, ':p')
+		var root_path = general_node.GetFullPath()
+
+		if stridx(full_target, root_path) != 0
+            return
+        endif
+
+		general_node.OpenPath(full_target)
+		instance.Refresh()
+		instance.GoToPath(full_target)
 	enddef
 
 	def GetBuf(): number
@@ -123,12 +143,17 @@ export class SupraTreeBuffer
 	enddef
 
 	def GoToPath(path: string)
-		const total_lines = line('$')
-		var lnum = 1
-		while lnum <= total_lines
-			const line_path = this.table_actions[lnum - 1].GetFullPath()
-			if line_path == path
-				cursor(lnum, 1)
+		const total_nodes = len(this.table_actions)
+		var lnum = 0
+
+		while lnum < total_nodes
+			const node = this.table_actions[lnum]
+			if node.GetFullPath() == path
+				var winid = bufwinid(this.buf)
+				if winid != -1
+					win_execute(winid, $'cursor({lnum + 1}, 1)')
+					win_execute(winid, 'normal! zz')
+				endif
 				return
 			endif
 			lnum += 1
@@ -177,7 +202,7 @@ export class SupraTreeBuffer
 
 		this.hashtable = {}
 		#### Git support add sign to the lines
-		for nb in range(1, line('$'))
+		for nb in range(1, len(this.table_actions))
 			const node = this.table_actions[nb - 1]
 			const full_path = node.GetFullPath()
 			if full_path == '' || full_path == '/'

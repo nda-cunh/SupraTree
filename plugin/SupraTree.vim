@@ -12,6 +12,7 @@ g:loaded_supratree = 1
 
 import autoload '../autoload/SupraTree/SupraTree.vim' as Tree 
 import autoload '../autoload/SupraTree/DarkenColor.vim' as DarkenColor
+import autoload '../autoload/SupraTree/SupraTreeBuffer.vim' as TreeBuffer 
 
 noremap <c-g> 	<scriptcmd>Tree.ToggleTree()<cr>
 inoremap <c-g> 	<scriptcmd>Tree.ToggleTree()<cr>
@@ -63,6 +64,15 @@ augroup SupraTree
 	autocmd ColorScheme * call DarkenColor.Create_HiColor()
 	autocmd WinResized * call Tree.OnResize()
 	autocmd BufWritePost * if exists('g:supra_tree') | g:supra_tree.GitRefresh() | endif
+	autocmd BufReadPost * {
+		if &buftype == '' && &filetype != 'SupraTree' && exists('g:supra_tree')
+			var file_path = expand('<afile>:p')
+			if get(t:, 'last_jumped_file', '') != file_path
+				t:last_jumped_file = file_path
+				TreeBuffer.SupraTreeBuffer.JumpToNode(file_path)
+			endif
+		endif
+	}
 augroup END
 
 DarkenColor.Create_HiColor()
