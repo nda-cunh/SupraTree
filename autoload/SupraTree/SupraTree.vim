@@ -125,12 +125,16 @@ export def OpenWindow()
 	# Set the width of the window
 	execute ':' .. size .. ' wincmd |'
 
+	var loaded_netrw = get(g:, 'loaded_netrw', 0)
+	var loaded_netrwPlugin = get(g:, 'loaded_netrwPlugin', 0)
+	g:loaded_netrw = 1
+	g:loaded_netrwPlugin = 1
 	t:supratree_winid = win_getid()
 	if exists('g:supra_tree')
 		const tree: SupraTreeBuffer = g:supra_tree
 		const buf = tree.GetBuf()
 
-		execute 'b ' .. buf
+		execute 'noautocmd b ' .. buf
 		if line('$', t:supratree_winid) < 3
 			tree.Refresh()
 		endif
@@ -141,6 +145,8 @@ export def OpenWindow()
 		b:supra_tree = instance
 	endif
 	wincmd p
+	g:loaded_netrw = loaded_netrw
+	g:loaded_netrwPlugin = loaded_netrwPlugin
 enddef
 
 export def RefreshTree()
