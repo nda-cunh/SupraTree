@@ -12,7 +12,7 @@ export abstract class Node
 	public var name: string
 	public var type: NodeType.NodeType
 	public var depth: number
-	public var node_parent: Node
+	public var node_parent: Node 
 	public var is_last: bool = false
 	var line_number: number = -1
 	var name_before_rename: string
@@ -33,9 +33,6 @@ export abstract class Node
 
 	def GetParent(): Node 
 		return this.node_parent
-	enddef
-
-	def UpdateDepth(new_depth: number)
 	enddef
 
 	def SetDeleted()
@@ -108,6 +105,8 @@ export abstract class Node
 			else
 				this.name = new_name
 			endif
+		elseif this.type == NodeType.NewFile
+			this.name = new_name
 		else
 			throw "Type " .. this.type .. "not supported to rename."
 		endif
