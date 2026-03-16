@@ -26,6 +26,10 @@ export abstract class Node
 		# NOTE Do nothing here, only DirectoryNode will implement this method
 	enddef
 
+	def UpdateDepth(new_depth: number)
+		# NOTE Do nothing here, only DirectoryNode will implement this method,
+	enddef
+
 	def GetPrefixLine(): string
 		return Utils.GetPrefixLine(this.depth)
 	enddef
