@@ -185,6 +185,16 @@ export class SupraTreeBuffer
 		call winrestview(winsaveview)
 	enddef
 
+	def RefreshPalette()
+		var winnid = bufwinid(this.buf)
+		if winnid == -1
+			return
+		endif
+		if exists('g:supratree_icons_glyph_palette_func')
+			win_execute(winnid, "silent! call(g:supratree_icons_glyph_palette_func, [])")
+		endif
+	enddef
+
 	def Refresh()
 		setbufvar(this.buf, '&modifiable', 1)
 		# clear the buffer
@@ -193,10 +203,9 @@ export class SupraTreeBuffer
 		this.DrawHeader(this.general_node.GetFullPath())
 		# this.general_node.DrawChilds()
 		this.general_node.DrawChilds()
-		# test if the function exist
-		if exists('g:supratree_icons_glyph_palette_func')
-			silent! call(g:supratree_icons_glyph_palette_func, [])
-		endif
+
+		this.RefreshPalette()
+
 		setbufvar(this.buf, '&modified', 0)
 		setbufvar(this.buf, '&modifiable', 0)
 
@@ -436,18 +445,16 @@ export class SupraTreeBuffer
 	def OnNewFile(is_up: bool)
 		const current_lnum = line('.')
 		const target_lnum = is_up ? current_lnum - 1 : current_lnum
+
 		var node_parent: Node
 		{
-
 			var index = current_lnum + (is_up == true ? -1 : 0)
 			var test_node: Node = this.table_actions[index - 1]
 			if test_node->instanceof(DirectoryNode) == true
 				node_parent = test_node
-			else
+			elseif test_node->instanceof(FileNode) == true
 				node_parent = test_node.GetParent()
-			endif
-
-			if node_parent->instanceof(SpecialNode)
+			else
 				node_parent = this.general_node
 			endif
 		}
@@ -494,8 +501,9 @@ export class SupraTreeBuffer
 			if node_parent->instanceof(DirectoryNode) == true
 				parent_path = node_parent.parent .. '/' .. node_parent.name
 			else
-				parent_path = node_parent.GetParent().parent .. '/' .. node_parent.node_parent.name
+				parent_path = node_parent.GetParent().parent .. '/' .. node_parent.GetParent().name
 			endif
+
 
 			if is_directory == true
 				new_node = DirectoryNode.new(parent_path, new_name[0 : -2], NodeType.NewFile, node_parent.depth + 1)
