@@ -137,6 +137,8 @@ export def OpenWindow()
 		execute 'noautocmd b ' .. buf
 		if line('$', t:supratree_winid) < 3
 			tree.Refresh()
+		else
+			tree.RefreshPalette()
 		endif
 	else
 		# Init The SupraTree Buffer
