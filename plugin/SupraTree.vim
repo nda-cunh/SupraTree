@@ -63,7 +63,11 @@ augroup SupraTree
 	autocmd BufEnter * call Tree.CheckNeedClose()
 	autocmd ColorScheme * call DarkenColor.Create_HiColor()
 	autocmd WinResized * call Tree.OnResize()
-	autocmd BufWritePost * if exists('g:supra_tree') | g:supra_tree.GitRefresh() | endif
+	autocmd BufWritePost * {
+		if exists('g:supra_tree')
+			g:supra_tree.RefreshFileSystem()
+		endif
+	}
 	autocmd BufReadPost * {
 		if &buftype == '' && &filetype != 'SupraTree' && exists('g:supra_tree')
 			var file_path = expand('<afile>:p')
