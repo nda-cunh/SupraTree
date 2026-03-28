@@ -178,11 +178,15 @@ export class SupraTreeBuffer
 	enddef
 
 	def RefreshKeepPos()
-		const winsaveview = winsaveview()
-		const pos = getpos('.')
+		const winnid = bufwinid(this.buf)
+		if winnid != -1
+			win_execute(winnid, 'b:saveview = winsaveview()')
+		endif
 		this.Refresh()
-		call setpos('.', pos)
-		call winrestview(winsaveview)
+		if winnid != -1
+			win_execute(winnid, 'call winrestview(b:saveview)')
+		endif
+		unlet! b:saveview
 	enddef
 
 	def RefreshPalette()
@@ -369,7 +373,11 @@ export class SupraTreeBuffer
 	enddef
 
 	def JumpToParent()
-		const current_lnum = line('.')
+		const winnid = bufwinid(this.buf)
+		if winnid == -1
+			return
+		endif
+		const current_lnum = line('.', winnid)
 		const current_node = this.table_actions[current_lnum - 1]
 		const parent_node = current_node.GetParent()
 
