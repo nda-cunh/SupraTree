@@ -97,7 +97,7 @@ export abstract class Node
 		endif
 		if this.type == NodeType.SimpleFile
 			if new_name == this.name
-				throw "You can't rename to the same name."
+				return
 			endif
 			this.type = NodeType.Renamed
 			this.name_before_rename = this.name
@@ -109,6 +109,8 @@ export abstract class Node
 			else
 				this.name = new_name
 			endif
+		elseif this.type == NodeType.Copy
+			this.name = new_name
 		elseif this.type == NodeType.NewFile
 			this.name = new_name
 		else
