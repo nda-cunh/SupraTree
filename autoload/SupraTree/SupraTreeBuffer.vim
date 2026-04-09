@@ -662,8 +662,14 @@ export class SupraTreeBuffer
 	enddef
 
 	def OnClick(type: Toggle.Type)
-		const node = this.table_actions[line('.') - 1]
-		node.Action(type)
+		try
+			const node = this.table_actions[line('.') - 1]
+			node.Action(type)
+		catch
+			echohl ErrorMsg
+			echo 'SupraTree Action Error: ' .. v:exception
+			echohl None
+		endtry
 	enddef
 
 	def OnBack()

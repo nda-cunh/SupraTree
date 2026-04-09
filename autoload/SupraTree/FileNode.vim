@@ -35,6 +35,19 @@ export class FileNode extends Node.Node
 	enddef
 
 	def Action(type: Toggle.Type)
+		# Only support open the file when it's a simple file, otherwise throw
+		if this.type != NodeType.Deleted && this.type != NodeType.SimpleFile
+			if this.type == NodeType.NewFile
+				throw "Save the new file before opening."
+			elseif this.type == NodeType.Renamed
+				throw "Save the renamed file before opening."
+			elseif this.type == NodeType.Copy
+				throw "Save the copied file before opening."
+			else
+				throw "Type " .. this.type .. " not supported to open."
+			endif
+		endif
+
 		wincmd p
 		const buf = bufnr('%')
 		const full_path = this.GetFullPath()

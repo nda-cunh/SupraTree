@@ -230,10 +230,17 @@ export class DirectoryNode extends Node
 	enddef
 
 	def Action(type: Toggle.Type)
-		if this.type == NodeType.Deleted
-			throw "Error: Cannot open a deleted directory."
-		elseif this.type == NodeType.NewFile
-			throw "Error: Cannot open a new directory."
+		# Only support open the directory when it's a simple file or deleted, otherwise throw
+		if this.type != NodeType.Deleted && this.type != NodeType.SimpleFile
+			if this.type == NodeType.NewFile
+				throw "Save the new directory before opening."
+			elseif this.type == NodeType.Renamed
+				throw "Save the renamed directory before opening."
+			elseif this.type == NodeType.Copy
+				throw "Save the copied directory before opening."
+			else
+				throw "Type " .. this.type .. " not supported to open."
+			endif
 		endif
 		if type == Toggle.NewTab
 			execute 'tabnew ' .. this.GetFullPath()
