@@ -599,6 +599,14 @@ export class SupraTreeBuffer
 			add(this.clipboard, node)
 			Func(node)
 		endfor
+		# Add all path to the clipboard
+		var clip_content = this.clipboard
+            ->mapnew((_, node) => node.GetFullPath())
+            ->join("\n")
+		setreg('"', clip_content)
+		if has('clipboard')
+			setreg('+', clip_content)
+		endif
 	enddef
 			
 	def OnPaste()
