@@ -146,7 +146,10 @@ export def OpenWindow()
 		g:supra_tree = instance
 		b:supra_tree = instance
 	endif
-	wincmd p
+
+	if get(g:, 'supratree_focus_on_open', true) == false
+		wincmd p
+	endif
 	g:loaded_netrw = loaded_netrw
 	g:loaded_netrwPlugin = loaded_netrwPlugin
 enddef

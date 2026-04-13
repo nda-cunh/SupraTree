@@ -10,9 +10,9 @@ endif
 
 g:loaded_supratree = 1
 
-import autoload '../autoload/SupraTree/SupraTree.vim' as Tree 
+import autoload '../autoload/SupraTree/SupraTree.vim' as Tree
 import autoload '../autoload/SupraTree/DarkenColor.vim' as DarkenColor
-import autoload '../autoload/SupraTree/SupraTreeBuffer.vim' as TreeBuffer 
+import autoload '../autoload/SupraTree/SupraTreeBuffer.vim' as TreeBuffer
 
 noremap <c-g> 	<scriptcmd>Tree.ToggleTree()<cr>
 inoremap <c-g> 	<scriptcmd>Tree.ToggleTree()<cr>
@@ -27,6 +27,7 @@ g:supratree_position                 = get(g:, 'supratree_position', 'left')
 g:supratree_width                    = get(g:, 'supratree_width', 26)
 g:supratree_open_on_startup          = get(g:, 'supratree_open_on_startup', true)
 g:supratree_sortascending            = get(g:, 'supratree_sortascending', true)
+g:supratree_focus_on_open            = get(g:, 'supratree_focus_on_open', true)
 
 command! SupraTreeToggle  Tree.ToggleTree()
 command! SupraTreeOpen    Tree.OpenTree()
@@ -53,10 +54,17 @@ prop_type_add('SupraTreeNewFileProp', {highlight: 'SupraTreeNewFile', priority: 
 prop_type_add('SupraTreeRenamedProp', {highlight: 'SupraTreeRenamed', priority: 5060})
 prop_type_add('SupraTreeCopyProp', {highlight: 'SupraTreeCopy', priority: 5060})
 
+def OpenTreeStartup()
+	Tree.OpenTree()
+	if g:supratree_focus_on_open == true 
+		wincmd p
+	endif
+enddef
+
 augroup SupraTree
 	autocmd!
-	if get(g:, 'supratree_open_on_startup', true) == true
-		autocmd VimEnter * call Tree.OpenTree()
+	if g:supratree_open_on_startup == true
+		autocmd VimEnter * ++once call OpenTreeStartup()
 	endif
 	autocmd TabEnter * call Tree.OnTabEnter()
 	autocmd WinClosed * call Tree.WhenClosingWindow()

@@ -26,6 +26,15 @@ supraconfig#RegisterMany([
 		}
 	},
 	{
+		id: 'supratree/focus_open',
+		type: 'bool',
+		default: true,
+		lore: 'Focus the explorer window on startup if it is open',
+		handler: (v) => {
+			g:supratree_open_on_startup = v 
+		}
+	},
+	{
 		id: 'supratree/winsize',
 		type: 'number',
 		default: 26,
