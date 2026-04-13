@@ -68,9 +68,23 @@ Plug 'nda-cunh/SupraTree.vim'
 | `<C-s>` / `:w` | **Save**: Actually apply changes to the disk |
 | `r` | **Refresh**: Sync the tree with the disk and VCS |
 
-## ⚙️ Global Configuration
+# ⚙️ Global Configuration
 
+## ⌨️ Custom Mappings
+By default, SupraTree is mapped to <C-g>. You can easily remap it to your preferred key (e.g., <F2>) in your .vimrc:
 Add these variables to your `.vimrc` to customize your experience:
+
+```vim
+# Change the toggle shortcut to F2 for Normal and Insert modes
+nmap <F2> <Plug>(SupraTreeToggle)
+imap <F2> <Plug>(SupraTreeToggle)
+```
+
+| Key | default | Action |
+| :--- | :--- | :--- |
+| `<Plug>(SupraTreeToggle)` | <c-g> | Toggle the SupraTree window |
+
+## 🔧 Settings
 
 ### Behavior & Layout
 - `g:supratree_open_on_startup` (Default: `true`): Automatically opens the tree on Vim launch.

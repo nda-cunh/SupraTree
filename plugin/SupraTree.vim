@@ -14,8 +14,13 @@ import autoload '../autoload/SupraTree/SupraTree.vim' as Tree
 import autoload '../autoload/SupraTree/DarkenColor.vim' as DarkenColor
 import autoload '../autoload/SupraTree/SupraTreeBuffer.vim' as TreeBuffer
 
-noremap <c-g> 	<scriptcmd>Tree.ToggleTree()<cr>
-inoremap <c-g> 	<scriptcmd>Tree.ToggleTree()<cr>
+noremap <Plug>(SupraTreeToggle)  	<scriptcmd>Tree.ToggleTree()<cr>
+inoremap <Plug>(SupraTreeToggle) 	<scriptcmd>Tree.ToggleTree()<cr>
+
+if !hasmapto('<Plug>SupraTreeToggle>')
+	nmap <c-g> <Plug>(SupraTreeToggle)
+	imap <c-g> <Plug>(SupraTreeToggle)
+endif
 
 g:supratree_icons_glyph_func         = get(g:, 'supratree_icons_glyph_func', 'g:WebDevIconsGetFileTypeSymbol')
 g:supratree_icons_glyph_palette_func = get(g:, 'supratree_icons_glyph_palette_func', 'SupraIcons#Palette#Apply')
