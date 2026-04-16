@@ -41,15 +41,18 @@ export class DirectoryNode extends Node
             full_path = simplify(this.parent .. '/' .. this.name .. '/')
         endif
 
-        var child_nodes = ReadAllNodes.GetCustomNodes(full_path, this.depth + 1)
-        if !empty(child_nodes)
-            child_nodes[-1].is_last = true
-        endif
+		try
+			var child_nodes = ReadAllNodes.GetCustomNodes(full_path, this.depth + 1)
+			if !empty(child_nodes)
+				child_nodes[-1].is_last = true
+			endif
 
-        this.children = child_nodes
-        for child in this.children
-            child.node_parent = this
-        endfor
+			this.children = child_nodes
+			for child in this.children
+				child.node_parent = this
+			endfor
+		catch
+		endtry
     enddef
 
     def OpenPath(target_path: string)
