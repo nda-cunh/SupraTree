@@ -43,6 +43,8 @@ Plug 'nda-cunh/SupraTree.vim'
 `:SupraTreeClose`     # Closes the tree window
 `:SupraTreeToggle`    # Opens or closes the tree depending on its state
 `:SupraTreeRefresh`   # Syncs the tree with the file system
+`:SupraTreeChangeDir` # Changes Vim's current working directory to the tree's root
+`:SupraTreeCD`        # alias for SupraTreeChangeDir
 
 
 ## ⌨️ Tree Buffer Mappings
@@ -92,6 +94,7 @@ imap <F2> <Plug>(SupraTreeToggle)
 - `g:supratree_position` (Default: `'left'`): Window position (`'left'` or `'right'`).
 - `g:supratree_width` (Default: `26`): Tree window width.
 - `g:supratree_sortascending` (Default: `true`): Sorts files alphabetically.
+- `g:supratree_sync_with_cd` (Default: `true`): Automatically syncs the tree with Vim's current working directory.
 
 ### Filtering & Visibility
 - `g:supratree_filter_files` (Default: `['*.o', '*.class', ...]`): List of file patterns to hide.

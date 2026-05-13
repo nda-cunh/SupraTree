@@ -526,6 +526,42 @@ export class SupraTreeBuffer
 		})
 	enddef
 
+	def ChangeDirectory(new_path: string)
+		const actual_path = this.general_node.GetFullPath()
+		var target_path: string
+		if new_path[0] == '/'
+			target_path = simplify(new_path)
+		else
+			target_path = simplify(actual_path .. '/' .. new_path)
+		endif
+
+		if target_path == simplify(actual_path .. '/..')
+			this.OnBack()
+			return
+		endif
+
+		if !isdirectory(target_path)
+			echohl ErrorMsg | echo "SupraTree: Invalid directory -> " .. target_path | echohl None
+			return
+		endif
+
+		if has_key(this.hashtable, target_path)
+			const node = this.hashtable[target_path]
+			if node->instanceof(DirectoryNode)
+				this.general_node = <DirectoryNode>node
+			else
+				this.general_node = <DirectoryNode>node.GetParent()
+			endif
+			this.general_node.UpdateDepth(-1)
+		else
+			this.general_node = DirectoryNode.new(target_path, '', NodeType.SimpleFile, -1)
+			this.general_node.Open()
+		endif
+
+		this.RefreshFileSystem()
+		cursor(3, 1) 
+	enddef
+
 	def OnRename()
 		const current_lnum = line('.')
 		const node = this.table_actions[current_lnum - 1]

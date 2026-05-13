@@ -33,11 +33,14 @@ g:supratree_width                    = get(g:, 'supratree_width', 26)
 g:supratree_open_on_startup          = get(g:, 'supratree_open_on_startup', true)
 g:supratree_sortascending            = get(g:, 'supratree_sortascending', true)
 g:supratree_focus_on_open            = get(g:, 'supratree_focus_on_open', true)
+g:supratree_sync_with_cd            = get(g:, 'supratree_sync_with_cwd', true)
 
 command! SupraTreeToggle  Tree.ToggleTree()
 command! SupraTreeOpen    Tree.OpenTree()
 command! SupraTreeClose   Tree.CloseTree()
 command! SupraTreeRefresh Tree.RefreshTree()
+command! -nargs=1 -complete=customlist,Tree.SupraTreeComplete SupraTreeChangeDir Tree.ChangeDirectory(<f-args>)
+command! -nargs=1 -complete=customlist,Tree.SupraTreeComplete SupraTreeCD        Tree.ChangeDirectory(<f-args>)
 
 hi SupraTreeGitAdded ctermfg=10 guifg=#48BF84 guibg=NONE
 hi SupraTreeGitModified ctermfg=14 guifg=#48A8BF guibg=NONE
@@ -81,6 +84,11 @@ augroup SupraTree
 			g:supra_tree.RefreshFileSystem()
 		endif
 	}
+	if g:supratree_sync_with_cd == true
+		autocmd DirChanged * {
+			Tree.ChangeDirectory(getcwd())
+		}
+	endif
 	autocmd BufReadPost * {
 		if &buftype == '' && &filetype != 'SupraTree' && exists('g:supra_tree')
 			var file_path = expand('<afile>:p')

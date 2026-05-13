@@ -23,6 +23,24 @@ export def ToggleTree()
 	endif
 enddef
 
+export def SupraTreeComplete(ArgLead: string, CmdLine: string, CursorPos: number): list<string>
+	const tree: SupraTreeBuffer = g:supra_tree
+
+    const current_root = tree.general_node.GetFullPath()
+    const search_path = simplify(current_root .. '/' .. fnamemodify(ArgLead, ':h'))
+    const filter_lead = fnamemodify(ArgLead, ':t')
+    const entries = readdir(search_path, (n) => isdirectory(search_path .. '/' .. n))
+    
+    add(entries, '..')
+
+    return entries
+        ->filter((_, val) => val =~ $'^{filter_lead}')
+        ->mapnew((_, val) => {
+            var head = fnamemodify(ArgLead, ':h')
+            return (head == '.' ? '' : head .. '/') .. val .. '/'
+        })
+enddef
+
 export def CheckNeedClose()
 	var lst_tab = tabpagebuflist()
 	if len(lst_tab) == 1
@@ -34,6 +52,13 @@ export def CheckNeedClose()
 			})
 			unlet t:supratree_winid
 		endif
+	endif
+enddef
+
+export def ChangeDirectory(new_path: string)
+	if exists('g:supra_tree')
+		const tree: SupraTreeBuffer = g:supra_tree
+		tree.ChangeDirectory(new_path)
 	endif
 enddef
 
