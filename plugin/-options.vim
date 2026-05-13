@@ -31,7 +31,7 @@ supraconfig#RegisterMany([
 		default: true,
 		lore: 'Focus the explorer window on startup if it is open',
 		handler: (v) => {
-			g:supratree_focus_on_open = v 
+			g:supratree_open_on_startup = v 
 		}
 	},
 	{
