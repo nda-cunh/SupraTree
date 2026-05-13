@@ -9,6 +9,7 @@ import autoload './NodeType.vim' as NodeType
 import autoload './PopupSave.vim' as PopupSave
 import autoload './SpecialNode.vim' as ASpecialNode
 import autoload './SpecialNodePrev.vim' as ASpecialNodePrev
+import autoload './SpecialNodeCD.vim' as ASpecialNodeCD
 import autoload './Toggle.vim' as Toggle
 import autoload './Utils.vim' as Utils
 
@@ -17,6 +18,7 @@ type Input = Popup.Input
 type Node = ANode.Node
 type SpecialNode = ASpecialNode.SpecialNode
 type SpecialNodePrev = ASpecialNodePrev.SpecialNodePrev
+type SpecialNodeCD = ASpecialNodeCD.SpecialNodeCD
 type DirectoryNode = ADirectoryNode.DirectoryNode
 type FileNode = AFileNode.FileNode
 type Modified = AModified.Modified
@@ -434,7 +436,7 @@ export class SupraTreeBuffer
 		this.lnum = 1
 		this.table_actions = []
 
-		this.NewAddLine(path, SpecialNode.new('ChangePath'))
+		this.NewAddLine(path, SpecialNodeCD.new())
 		this.NewAddLine('', SpecialNode.new('null'))
 		this.NewAddLine(Utils.GetIcons('', 2) .. ' ../', SpecialNodePrev.new())
 	enddef
