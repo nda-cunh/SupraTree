@@ -31,7 +31,7 @@ supraconfig#RegisterMany([
 		default: true,
 		lore: 'Focus the explorer window on startup if it is open',
 		handler: (v) => {
-			g:supratree_open_on_startup = v 
+			g:supratree_focus_on_open = v
 		}
 	},
 	{
@@ -90,6 +90,15 @@ supraconfig#RegisterMany([
 		handler: (v) => {
 			g:supratree_position = v
 			Tree.Move()
+		}
+	},
+	{
+		id: 'supratree/sync_with_cwd',
+		type: 'bool',
+		default: true,
+		lore: 'Sync the explorer with the current working directory',
+		handler: (v) => {
+			g:supratree_sync_with_cd = v
 		}
 	}
 ])
