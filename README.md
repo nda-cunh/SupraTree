@@ -6,8 +6,7 @@ Positioned between **Neo-tree** for its interface and **Oil.nvim** for its editi
 <img width="755" height="750" alt="image" src="https://github.com/user-attachments/assets/7d73090c-b25c-4a4c-ae74-43ffd9b801e3" />
 
 
-
-https://github.com/user-attachments/assets/18dee59a-0ac2-48cd-8fb7-9cfa0886c489
+<img width="949" height="901" alt="supratree" src="https://github.com/user-attachments/assets/3d1aa347-4f21-4c64-bf3d-082662a9595c" />
 
 
 ## ✨ The "Supra" Concept
@@ -19,7 +18,7 @@ Unlike traditional explorers that apply every change immediately, SupraTree work
 
 ## 🚀 Features
 
-* **Direct Editing**: Rename (`i`), create (`o`), or delete (`dd`) files just like text.
+* **Direct Editing**: Rename (`i`), create (`o` or `O`), or delete (`dd`) files just like text.
 * **Integrated VCS**: Asynchronous support for **Git** and **SVN**.
 * **Smart Clipboard**: Yank/Paste (`y`/`p`) supporting visual selections for bulk operations.
 * **Modern UI**: Automatic sidebar dimming (`DarkenColor`) and full icon font support.
