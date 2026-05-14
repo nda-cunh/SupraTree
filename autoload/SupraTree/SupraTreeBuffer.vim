@@ -486,45 +486,62 @@ export class SupraTreeBuffer
 		})
 
 		input.AddCbEnter((new_name) => {
-			# create the new file with the given name
 			if len(new_name) == 0
 				throw "File name cannot be empty."
 			endif
-			# test the filename with an regex for invalid characters
-			var is_directory: bool
-			if new_name[-1] == '/'
-				# an directory is only word characters but end with / can't
-				# contains more '/' but only at the end
-				if !(new_name[0 : -2] =~# '\v^[a-zA-Z0-9._-]+$')
-					throw "Invalid directory name."
-				endif
-				is_directory = true
-			else
-				if !(new_name =~# '\v^[a-zA-Z0-9._-]+$')
-					throw "Invalid file name."
-				endif
-				is_directory = false
-			endif
 
-			var new_node: Node
-			var parent_path: string
+			var parts = split(new_name, '/')
+			var is_dir = new_name[-1] == '/'
+
+			for p in parts
+				if p !~# '\v^[a-zA-Z0-9._-]+$'
+					throw "Invalid name segment: " .. p
+				endif
+			endfor
+
+			var current_parent: Node
 			if node_parent->instanceof(DirectoryNode) == true
-				parent_path = node_parent.parent .. '/' .. node_parent.name
+				current_parent = node_parent
 			else
-				parent_path = node_parent.GetParent().parent .. '/' .. node_parent.GetParent().name
+				current_parent = node_parent.GetParent()
 			endif
 
+			var limit = is_dir ? len(parts) : len(parts) - 1
+			for i in range(0, limit - 1)
+				var dir_name = parts[i]
+				var found = false
 
-			if is_directory == true
-				new_node = DirectoryNode.new(parent_path, new_name[0 : -2], NodeType.NewFile, node_parent.depth + 1)
+				if current_parent->instanceof(DirectoryNode)
+					var dir_parent = <DirectoryNode>current_parent
+					for child in dir_parent.children
+						if child.name == dir_name && child->instanceof(DirectoryNode)
+							current_parent = child
+							found = true
+							break
+						endif
+					endfor
+				endif
+
+				if !found
+					var next_node = DirectoryNode.new(current_parent.GetFullPath(), dir_name, NodeType.NewFile, current_parent.depth + 1)
+					current_parent.AddChild(next_node)
+					current_parent = next_node
+				endif
+			endfor
+
+			var final_name = parts[-1]
+			var final_node: Node
+			if is_dir
+				final_node = DirectoryNode.new(current_parent.GetFullPath(), final_name, NodeType.NewFile, current_parent.depth + 1)
 			else
-				new_node = FileNode.new(parent_path, new_name, NodeType.NewFile, node_parent.depth + 1)
+				final_node = FileNode.new(current_parent.GetFullPath(), final_name, NodeType.NewFile, current_parent.depth + 1)
 			endif
 
-			node_parent.AddChild(new_node)
+			current_parent.AddChild(final_node)
+
 			this.Refresh()
 			input.Close()
-			this.GoToPath(new_node.GetFullPath())
+			this.GoToPath(final_node.GetFullPath())
 		})
 	enddef
 
