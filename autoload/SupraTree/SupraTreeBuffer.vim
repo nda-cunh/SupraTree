@@ -506,7 +506,8 @@ export class SupraTreeBuffer
 				current_parent = node_parent.GetParent()
 			endif
 
-			var limit = is_dir ? len(parts) : len(parts) - 1
+
+			var limit = len(parts) - 1
 			for i in range(0, limit - 1)
 				var dir_name = parts[i]
 				var found = false
@@ -538,6 +539,7 @@ export class SupraTreeBuffer
 			endif
 
 			current_parent.AddChild(final_node)
+		
 
 			this.Refresh()
 			input.Close()
