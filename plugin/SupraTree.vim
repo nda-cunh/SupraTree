@@ -17,7 +17,7 @@ import autoload '../autoload/SupraTree/SupraTreeBuffer.vim' as TreeBuffer
 noremap <Plug>(SupraTreeToggle)  	<scriptcmd>Tree.ToggleTree()<cr>
 inoremap <Plug>(SupraTreeToggle) 	<scriptcmd>Tree.ToggleTree()<cr>
 
-if !hasmapto('<Plug>SupraTreeToggle>')
+if !hasmapto('<Plug>(SupraTreeToggle)')
 	nmap <c-g> <Plug>(SupraTreeToggle)
 	imap <c-g> <Plug>(SupraTreeToggle)
 endif
