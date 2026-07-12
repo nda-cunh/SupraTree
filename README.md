@@ -69,6 +69,8 @@ Plug 'nda-cunh/SupraTree.vim'
 | `<C-s>` / `:w` | **Save**: Actually apply changes to the disk |
 | `r` | **Refresh**: Sync the tree with the disk and VCS |
 
+Inside the rename / new file popup, `<Enter>` confirms the name and `<C-s>` confirms it **and** saves to the disk right away. When that name is the only pending change, it is applied without asking; if other changes are still pending, the usual confirmation popup lists them all.
+
 # ⚙️ Global Configuration
 
 ## ⌨️ Custom Mappings

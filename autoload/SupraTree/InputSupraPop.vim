@@ -4,6 +4,7 @@ vim9script
 # see Input.Create(): the imports below stay unresolved otherwise.
 
 import autoload 'SupraPop/Input.vim' as ASupraPop
+import autoload 'SupraPop/Base.vim' as ASupraPopBase
 import autoload './InputBase.vim' as AInputBase
 
 type IInput = AInputBase.IInput
@@ -15,6 +16,7 @@ export class InputSupraPop implements IInput
 	var cb_enter: list<func(string)> = []
 	var cb_changed: list<func(string, string)> = []
 	var cb_quit: list<func()> = []
+	var cb_keys: dict<list<func(string)>> = {}
 
 	def new(prompt: string, ops: dict<any>)
 		var options = copy(ops)
@@ -42,6 +44,17 @@ export class InputSupraPop implements IInput
 				Func()
 			endfor
 		})
+		# Runs before the editing keys, so a bound key always wins
+		this.input.AddEventKeyPressedFocus((_: any, key: string): number => {
+			if !this.cb_keys->has_key(key)
+				return ASupraPopBase.CONTINUE
+			endif
+			const line = this.input.GetInput()
+			for Func in this.cb_keys[key]
+				Func(line)
+			endfor
+			return ASupraPopBase.BLOCK
+		})
 	enddef
 
 	def AddCbEnter(Func: func(string))
@@ -54,6 +67,13 @@ export class InputSupraPop implements IInput
 
 	def AddCbQuit(Func: func())
 		this.cb_quit->add(Func)
+	enddef
+
+	def AddCbKey(key: string, Func: func(string))
+		if !this.cb_keys->has_key(key)
+			this.cb_keys[key] = []
+		endif
+		this.cb_keys[key]->add(Func)
 	enddef
 
 	def SetInput(text: string)

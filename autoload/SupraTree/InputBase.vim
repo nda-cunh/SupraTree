@@ -12,6 +12,8 @@ export interface IInput
 	def AddCbEnter(Func: func(string))
 	def AddCbChanged(Func: func(string, string))
 	def AddCbQuit(Func: func())
+	# Binds an extra key inside the popup; Func gets the current input line.
+	def AddCbKey(key: string, Func: func(string))
 	def Close()
 	def GetWid(): number
 endinterface

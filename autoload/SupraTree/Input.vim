@@ -18,6 +18,7 @@ export class Input implements IInput
 	var cb_enter: list<func(string)> = []
 	var cb_changed: list<func(string, string)> = []
 	var cb_quit: list<func()> = []
+	var cb_keys: dict<list<func(string)>> = {}
 
 	def new(prompt: string, ops: dict<any>)
 		this.prompt = prompt
@@ -64,7 +65,22 @@ export class Input implements IInput
 		this.cb_quit->add(Func)
 	enddef
 
+	def AddCbKey(key: string, Func: func(string))
+		if !this.cb_keys->has_key(key)
+			this.cb_keys[key] = []
+		endif
+		this.cb_keys[key]->add(Func)
+	enddef
+
 	def FilterInput(wid: number, key: string): number
+		if this.cb_keys->has_key(key)
+			const line = join(copy(this.input_line), '')
+			for Func in this.cb_keys[key]
+				Func(line)
+			endfor
+			return 1
+		endif
+
 		var ascii_val = char2nr(key)
 		var cur_pos = this.cur_pos
 		var line = this.input_line

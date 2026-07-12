@@ -323,7 +323,15 @@ export class SupraTreeBuffer
 	#######################################################
 	# Save Actions  (called on BufWriteCmd) or with <C-S>
 	#######################################################
-	def SaveActions()
+	# Called from inside an input popup filter: the save popup can only be
+	# opened once that popup is closed and its filter has returned.
+	def DeferSaveActions()
+		timer_start(0, (_) => this.SaveActions(true))
+	enddef
+
+	# skip_confirm applies a lone pending action straight away: the user just
+	# typed it in, listing that single action back to them buys nothing.
+	def SaveActions(skip_confirm: bool = false)
 		try
 		var modified = Modified.new()
 
@@ -333,7 +341,13 @@ export class SupraTreeBuffer
 			throw "SupraTree: No changes to save."
 		endif
 
-		var SavePopup = PopupSave.PopupSave.new(modified) 
+		if skip_confirm == true && modified.Count() == 1
+			modified.ApplyAll()
+			this.RefreshWithOpenedDirs(modified.GetOpenedDirectories())
+			return
+		endif
+
+		var SavePopup = PopupSave.PopupSave.new(modified)
 
 		SavePopup.OnYes(() => {
 			modified.ApplyAll()
@@ -486,7 +500,7 @@ export class SupraTreeBuffer
 			this.RefreshKeepPos()
 		})
 
-		input.AddCbEnter((new_name) => {
+		var Validate: func(string) = (new_name) => {
 			if len(new_name) == 0
 				throw "File name cannot be empty."
 			endif
@@ -545,6 +559,12 @@ export class SupraTreeBuffer
 			this.Refresh()
 			input.Close()
 			this.GoToPath(final_node.GetFullPath())
+		}
+
+		input.AddCbEnter(Validate)
+		input.AddCbKey("\<C-s>", (new_name) => {
+			Validate(new_name)
+			this.DeferSaveActions()
 		})
 	enddef
 
@@ -608,12 +628,18 @@ export class SupraTreeBuffer
 			setbufvar(this.buf, '&modifiable', 0)
 		})
 
-		input.AddCbEnter((new_name) => {
+		var Validate: func(string) = (new_name) => {
 			node.Rename(new_name)
 			this.Refresh()
 			input.Close()
 			this.GoToPath(node.GetFullPath())
 			setbufvar(this.buf, '&modifiable', 0)
+		}
+
+		input.AddCbEnter(Validate)
+		input.AddCbKey("\<C-s>", (new_name) => {
+			Validate(new_name)
+			this.DeferSaveActions()
 		})
 	enddef
 

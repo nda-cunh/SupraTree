@@ -290,6 +290,10 @@ export class Modified
 		return len(this.modified_lst) == 0
 	enddef
 
+	def Count(): number
+		return len(this.modified_lst)
+	enddef
+
 	def GetStringList(): list<string>
 		var lst: list<string> = []
 		this.Sort()
