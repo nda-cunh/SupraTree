@@ -1,6 +1,12 @@
 vim9script
 
-export class Input
+import autoload './InputBase.vim' as AInputBase
+import autoload './InputSupraPop.vim' as AInputSupraPop
+
+type IInput = AInputBase.IInput
+
+# Built-in fallback, used when SupraPopup is not installed.
+export class Input implements IInput
 	var prompt: string
 	var prompt_charlen: number
 	var input_line: list<string>
@@ -232,4 +238,29 @@ export class Input
 		popup_settext(this.popup, lines)
 	enddef
 
+	def GetWid(): number
+		return this.popup
+	enddef
+
 endclass
+
+var use_suprapopup: number = -1
+
+def HasSupraPopup(): bool
+	if use_suprapopup == -1
+		if exists('g:supratree_use_suprapopup')
+			use_suprapopup = g:supratree_use_suprapopup ? 1 : 0
+		else
+			use_suprapopup = empty(globpath(&runtimepath, 'autoload/SupraPop/Input.vim')) ? 0 : 1
+		endif
+	endif
+	return use_suprapopup == 1
+enddef
+
+# Creates an input popup, backed by SupraPopup when available.
+export def Create(prompt: string, ops: dict<any>): IInput
+	if HasSupraPopup()
+		return AInputSupraPop.Create(prompt, ops)
+	endif
+	return Input.new(prompt, ops)
+enddef

@@ -10,7 +10,6 @@ import autoload 'SupraTree/SupraTreeBuffer.vim' as NSupraTreeBuffer
 
 type DirectoryNode = ADirectoryNode.DirectoryNode
 type SpecialNode = ASpecialNode.SpecialNode
-type Input = AInput.Input
 
 export class SpecialNodeCD extends SpecialNode
 	def new()
@@ -19,7 +18,7 @@ export class SpecialNodeCD extends SpecialNode
 	def Action(type: Toggle.Type)
 		const tree: any = g:supra_tree
 		const icon = ''
-		var input = Input.new(icon .. ' ', {
+		var input = AInput.Create(icon .. ' ', {
 			minwidth: 24,
 			title: 'Change Directory',
 			line: "cursor-3",
@@ -35,6 +34,6 @@ export class SpecialNodeCD extends SpecialNode
 			var new_path = line
 			tree.ChangeDirectory(new_path)
 		})
-		win_execute(input.popup, 'silent! call(g:supratree_icons_glyph_palette_func, [])')
+		win_execute(input.GetWid(), 'silent! call(g:supratree_icons_glyph_palette_func, [])')
 	enddef
 endclass

@@ -3,6 +3,7 @@ vim9script
 import autoload './DirectoryNode.vim' as ADirectoryNode
 import autoload './FileNode.vim' as AFileNode
 import autoload './Input.vim' as Popup
+import autoload './InputBase.vim' as AInputBase
 import autoload './Modified.vim' as AModified
 import autoload './Node.vim' as ANode
 import autoload './NodeType.vim' as NodeType
@@ -14,7 +15,7 @@ import autoload './Toggle.vim' as Toggle
 import autoload './Utils.vim' as Utils
 
 
-type Input = Popup.Input
+type Input = AInputBase.IInput
 type Node = ANode.Node
 type SpecialNode = ASpecialNode.SpecialNode
 type SpecialNodePrev = ASpecialNodePrev.SpecialNodePrev
@@ -761,7 +762,7 @@ endclass
 
 def CreatePopup(initial_text: string, title: string): Input
 	const icon = Utils.GetIcons(initial_text)
-	var input = Input.new(icon .. ' ', {
+	var input = Popup.Create(icon .. ' ', {
 		minwidth: 24,
 		title: title,
 		line: "cursor-3",
@@ -773,6 +774,6 @@ def CreatePopup(initial_text: string, title: string): Input
 		const ic = Utils.GetIcons(line) # preload icon cache
 		input.SetPrompt(ic .. ' ')
 	})
-	win_execute(input.popup, 'silent! call(g:supratree_icons_glyph_palette_func, [])')
+	win_execute(input.GetWid(), 'silent! call(g:supratree_icons_glyph_palette_func, [])')
 	return input
 enddef
