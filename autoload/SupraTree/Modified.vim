@@ -194,7 +194,11 @@ class NewFileObject extends NewObject
 		if !isdirectory(dir_path)
 			mkdir(dir_path, 'p')
 		endif
-		return writefile([], this.path) == 0
+		var ok = writefile([], this.path) == 0
+		if ok && exists('*g:SupraAchMetric')
+			call g:SupraAchMetric('supratree_create', 1)
+		endif
+		return ok
 	enddef
 
 	def ToString(): string
