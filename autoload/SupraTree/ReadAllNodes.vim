@@ -30,7 +30,7 @@ export def GetCustomNodes(path: string, depth: number = 0): list<Node>
 	endif
 	filter_pattern ..= '\)'
 
-	# readdirex est génial car il donne déjà .name et .type
+	# readdirex is great because it already provides .name and .type
 	const entries = readdirex(path, (n) => (filter_pattern == '' || n.name !~ filter_pattern), {sort: 'none'})
 
 	for entry in entries
@@ -42,7 +42,7 @@ export def GetCustomNodes(path: string, depth: number = 0): list<Node>
 		endif
 	endfor
 
-	# On trie les listes d'objets par la propriété 'name'
+	# Sort the object lists by the 'name' property
 	sort(dir_nodes, (a: Node, b: Node): number => a.name >? b.name ? 1 : -1)
 	sort(file_nodes, (a: Node, b: Node): number => a.name >? b.name ? 1 : -1)
 

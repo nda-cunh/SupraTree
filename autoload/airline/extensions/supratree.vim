@@ -1,5 +1,5 @@
 if !exists('g:loaded_airline')
-  finish
+finish
 endif
 
 function! airline#extensions#supratree#apply_active(...) abort

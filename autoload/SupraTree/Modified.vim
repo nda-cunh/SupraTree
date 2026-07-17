@@ -21,24 +21,24 @@ abstract class DeletedObject extends BaseObject
 endclass
 
 abstract class RenamedObject extends BaseObject
-    var original_path: string
-    var new_path: string
+	var original_path: string
+	var new_path: string
 
-    def ToString(): string
+	def ToString(): string
 		const icon_1 = Utils.GetIcons(this.original_path)
 		const icon_2 = Utils.GetIcons(this.new_path)
 
 		return "[Rename]       " .. icon_1 .. ' ' .. this.original_path .. ' → ' .. icon_2 .. ' ' .. this.new_path
-    enddef
+	enddef
 
-    def Apply(): bool
-        return rename(this.original_path, this.new_path) == 0
-    enddef
+	def Apply(): bool
+		return rename(this.original_path, this.new_path) == 0
+	enddef
 
-    def Init(orig: string, newp: string)
-        this.original_path = simplify(orig)
-        this.new_path = simplify(newp)
-    enddef
+	def Init(orig: string, newp: string)
+		this.original_path = simplify(orig)
+		this.new_path = simplify(newp)
+	enddef
 endclass
 
 abstract class CopiedObject extends BaseObject
@@ -90,9 +90,9 @@ endclass
 
 
 class RenamedFileObject extends RenamedObject
-    def new(orig: string, newp: string)
-        super.Init(orig, newp)
-    enddef
+	def new(orig: string, newp: string)
+		super.Init(orig, newp)
+	enddef
 
 	def GetWeight(): number
 		return 5
@@ -100,9 +100,9 @@ class RenamedFileObject extends RenamedObject
 endclass
 
 class RenamedDirectoryObject extends RenamedObject
-    def new(orig: string, newp: string)
-        super.Init(orig, newp)
-    enddef
+	def new(orig: string, newp: string)
+		super.Init(orig, newp)
+	enddef
 
 	def GetWeight(): number
 		return 6
@@ -129,7 +129,7 @@ class CopiedFileObject extends CopiedObject
 	enddef
 
 	def Apply(): bool
-		# S'assurer que le répertoire de destination existe
+		# Make sure the destination directory exists
 		const dest_dir = fnamemodify(this.new_path, ':h')
 		if !isdirectory(dest_dir)
 			mkdir(dest_dir, 'p')
@@ -160,7 +160,7 @@ class CopiedDirectoryObject extends CopiedObject
 	enddef
 
 	def Apply(): bool
-		# S'assurer que le dossier parent de la destination existe
+		# Make sure the destination's parent directory exists
 		const dest_parent = fnamemodify(this.new_path, ':h')
 		if !isdirectory(dest_parent)
 			mkdir(dest_parent, 'p')
@@ -266,19 +266,19 @@ export class Modified
 		this.modified_lst->add(CopiedDirectoryObject.new(orig, newp))
 	enddef
 
-    def Sort()
-        this.modified_lst->sort((a, b) => {
-            const order_a = a.GetWeight()
-            const order_b = b.GetWeight()
+	def Sort()
+		this.modified_lst->sort((a, b) => {
+			const order_a = a.GetWeight()
+			const order_b = b.GetWeight()
 
-            return order_a - order_b
-        })
-    enddef
+			return order_a - order_b
+		})
+	enddef
 
 	def GetOpenedDirectories(): list<string>
 		return this.opened_dirs
 	enddef
-	
+
 	def AddOpenDirectory(path: string)
 		add(this.opened_dirs, simplify(path))
 	enddef

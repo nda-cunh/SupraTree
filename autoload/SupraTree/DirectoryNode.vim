@@ -30,16 +30,16 @@ export class DirectoryNode extends Node
 		endfor
 	enddef
 
-    def Load()
-        if this.is_open | return | endif
+	def Load()
+		if this.is_open | return | endif
 
-        this.is_open = true
-        var full_path = ""
-        if this.type == NodeType.Renamed
-            full_path = simplify(this.parent .. '/' .. this.name_before_rename .. '/')
-        else
-            full_path = simplify(this.parent .. '/' .. this.name .. '/')
-        endif
+		this.is_open = true
+		var full_path = ""
+		if this.type == NodeType.Renamed
+			full_path = simplify(this.parent .. '/' .. this.name_before_rename .. '/')
+		else
+			full_path = simplify(this.parent .. '/' .. this.name .. '/')
+		endif
 
 		try
 			var child_nodes = ReadAllNodes.GetCustomNodes(full_path, this.depth + 1)
@@ -53,12 +53,12 @@ export class DirectoryNode extends Node
 			endfor
 		catch
 		endtry
-    enddef
+	enddef
 
-    def OpenPath(target_path: string)
-        this.Load()
+	def OpenPath(target_path: string)
+		this.Load()
 
-        var target = simplify(target_path)
+		var target = simplify(target_path)
 
 		for child in this.children
 			var child_path = simplify(child.GetFullPath())
@@ -74,7 +74,7 @@ export class DirectoryNode extends Node
 				endif
 			endif
 		endfor
-    enddef
+	enddef
 
 	def IsOpen(): bool
 		return this.is_open
@@ -215,14 +215,14 @@ export class DirectoryNode extends Node
 		this.Load()
 
 		var lst_opened_dirs: list<string> = get(t:, 'OpenedDirs', [])
-        for child in this.children
-            if child->instanceof(DirectoryNode)
-                var dirnode = <DirectoryNode>child
-                if index(lst_opened_dirs, child.GetFullPath()) != -1
-                    dirnode.Open()
-                endif
-            endif
-        endfor
+		for child in this.children
+			if child->instanceof(DirectoryNode)
+				var dirnode = <DirectoryNode>child
+				if index(lst_opened_dirs, child.GetFullPath()) != -1
+					dirnode.Open()
+				endif
+			endif
+		endfor
 	enddef
 
 	def Close()

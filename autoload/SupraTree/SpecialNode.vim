@@ -15,7 +15,7 @@ export class SpecialNode extends Node.Node
 
 	def Draw(is_end: bool = false)
 	enddef
-	
+
 	def Action(type: Toggle.Type)
 		echom "SpecialNode Action: " .. this.action
 	enddef
