@@ -52,7 +52,9 @@ Plug 'nda-cunh/SupraTree.vim'
 | Key | Action |
 | :--- | :--- |
 | `<CR>` | Open file / Expand folder |
-| `<C-t>` / `<C-h>` / `<C-v>` | Open in Tab / Split / VSplit |
+| `t` / `<C-t>` | Open in a new **Tab** |
+| `s` / `<C-h>` | Open in a horizontal **Split** |
+| `v` / `<C-v>` | Open in a vertical **VSplit** |
 | `-` / `<BS>` | Move up to parent directory |
 | `P` | Jump to parent folder |
 | `{` / `}` | Jump to previous / next sibling |
@@ -71,6 +73,8 @@ Plug 'nda-cunh/SupraTree.vim'
 
 Inside the rename / new file popup, `<Enter>` confirms the name and `<C-s>` confirms it **and** saves to the disk right away. When that name is the only pending change, it is applied without asking; if other changes are still pending, the usual confirmation popup lists them all.
 
+> Since `v` now opens a vertical split, enter Visual mode with `V` (linewise) to select several rows for `d` / `y`.
+
 # ⚙️ Global Configuration
 
 ## ⌨️ Custom Mappings
@@ -86,6 +90,44 @@ imap <F2> <Plug>(SupraTreeToggle)
 | Key | default | Action |
 | :--- | :--- | :--- |
 | `<Plug>(SupraTreeToggle)` | <c-g> | Toggle the SupraTree window |
+
+### Rebinding tree-buffer keys
+
+The in-tree keys are configurable through `g:supratree_mappings`. Each action
+takes **either a single key or a list of keys**, so you can bind several keys to
+the same action. An empty string (or empty list) disables an action.
+
+```vim
+g:supratree_mappings = {
+    'open_split':  ['s', "\<C-h>"],   # multiple keys at once
+    'open_vsplit': ['v', "\<C-v>"],
+    'open_tab':    ['t', "\<C-t>"],
+    'refresh':     'R',                # a single key
+    'yank':        '',                 # disable an action
+}
+```
+
+Only the actions you list are overridden; every other key keeps its default.
+
+| Action | Default keys | Description |
+| :--- | :--- | :--- |
+| `open_edit` | `<CR>` | Open file / expand folder |
+| `open_tab` | `t`, `<C-t>` | Open in a new tab |
+| `open_split` | `s`, `<C-h>` | Open in a horizontal split |
+| `open_vsplit` | `v`, `<C-v>` | Open in a vertical split |
+| `close_all` | `W` | Close all open directories |
+| `back` | `-`, `<BS>` | Move up to parent directory |
+| `jump_parent` | `P` | Jump to the parent folder |
+| `next_sibling` | `>`, `}` | Jump to the next sibling |
+| `prev_sibling` | `<`, `{` | Jump to the previous sibling |
+| `rename` | `i` | Rename the node under the cursor |
+| `new_file` | `o` | New file below (add `/` for a folder) |
+| `new_file_above` | `O` | New file above |
+| `remove` | `dd` | Mark the node for deletion |
+| `yank` | `yy` | Add to the SupraTree clipboard |
+| `paste` | `p` | Paste copied files into the folder |
+| `save` | `<C-s>` | Apply pending changes to the disk |
+| `refresh` | `r` | Sync the tree with disk and VCS |
 
 ## 🔧 Settings
 

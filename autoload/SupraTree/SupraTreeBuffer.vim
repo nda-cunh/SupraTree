@@ -24,6 +24,69 @@ type DirectoryNode = ADirectoryNode.DirectoryNode
 type FileNode = AFileNode.FileNode
 type Modified = AModified.Modified
 
+
+# Each action maps to the normal-mode command it triggers. Users rebind the
+# keys through g:supratree_mappings; a value can be a single key or a list of
+# keys, so several keys can drive the same action (e.g. 's' and '<c-h>').
+const MAP_ACTIONS = {
+	open_edit:      'b:supra_tree.OnClick(Toggle.Enter)',
+	open_tab:       'b:supra_tree.OnClick(Toggle.NewTab)',
+	open_split:     'b:supra_tree.OnClick(Toggle.Split)',
+	open_vsplit:    'b:supra_tree.OnClick(Toggle.VSplit)',
+	close_all:      'b:supra_tree.CloseAllDirs()',
+	back:           'b:supra_tree.OnBack()',
+	jump_parent:    'b:supra_tree.JumpToParent()',
+	next_sibling:   'b:supra_tree.JumpToSibling(1)',
+	prev_sibling:   'b:supra_tree.JumpToSibling(-1)',
+	rename:         'b:supra_tree.OnRename()',
+	new_file:       'b:supra_tree.OnNewFile(false)',
+	new_file_above: 'b:supra_tree.OnNewFile(true)',
+	remove:         'b:supra_tree.OnRemove(false)',
+	yank:           'b:supra_tree.OnYank(false)',
+	paste:          'b:supra_tree.OnPaste()',
+	save:           'b:supra_tree.SaveActions()',
+	refresh:        'b:supra_tree.RefreshFileSystem()',
+}
+
+const DEFAULT_MAPPINGS = {
+	open_edit:      ['<cr>'],
+	open_tab:       ['t', '<c-t>'],
+	open_split:     ['s', '<c-h>'],
+	open_vsplit:    ['v', '<c-v>'],
+	close_all:      ['W'],
+	back:           ['-', '<bs>'],
+	jump_parent:    ['P'],
+	next_sibling:   ['>', '}'],
+	prev_sibling:   ['<', '{'],
+	rename:         ['i'],
+	new_file:       ['o'],
+	new_file_above: ['O'],
+	remove:         ['dd'],
+	yank:           ['yy'],
+	paste:          ['p'],
+	save:           ['<c-s>'],
+	refresh:        ['r'],
+}
+
+# Apply the buffer-local key mappings for the current SupraTree buffer,
+# honouring any user overrides in g:supratree_mappings. An empty key or list
+# disables the action.
+def ApplyMappings()
+	const user: dict<any> = get(g:, 'supratree_mappings', {})
+	for [action, cmd] in items(MAP_ACTIONS)
+		var keys: any = get(user, action, DEFAULT_MAPPINGS[action])
+		if type(keys) == v:t_string
+			keys = [keys]
+		endif
+		for key in keys
+			if key == ''
+				continue
+			endif
+			execute printf('nnoremap <buffer> %s <scriptcmd>%s<cr>', key, cmd)
+		endfor
+	endfor
+enddef
+
 export class SupraTreeBuffer
 	public var general_node: DirectoryNode
 	var buf: number # Buffer number
@@ -60,39 +123,16 @@ export class SupraTreeBuffer
 		setbufvar(buf, '&wincolor', 'TreeNormalDark')
 		setbufvar(buf, '&filetype', 'SupraTree')
 
-		# --- Navigation & Opening ---
-		nnoremap <buffer> <cr>          <scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
-		nnoremap <buffer> <c-t>         <scriptcmd>b:supra_tree.OnClick(Toggle.NewTab)<cr>
-		nnoremap <buffer> <c-h>         <scriptcmd>b:supra_tree.OnClick(Toggle.Split)<cr>
-		nnoremap <buffer> <c-v>         <scriptcmd>b:supra_tree.OnClick(Toggle.VSplit)<cr>
-		nnoremap <buffer> W			 	<scriptcmd>b:supra_tree.CloseAllDirs()<cr>
-
-		# --- Tree Traversal ---
-		nnoremap <buffer> -             <scriptcmd>b:supra_tree.OnBack()<cr>
-		nnoremap <buffer> <bs>          <scriptcmd>b:supra_tree.OnBack()<cr>
-		nnoremap <buffer> P             <scriptcmd>b:supra_tree.JumpToParent()<cr>
-		nnoremap <buffer> >             <scriptcmd>b:supra_tree.JumpToSibling(1)<cr>
-		nnoremap <buffer> <             <scriptcmd>b:supra_tree.JumpToSibling(-1)<cr>
-		nnoremap <buffer> }             <scriptcmd>b:supra_tree.JumpToSibling(1)<cr>
-		nnoremap <buffer> {             <scriptcmd>b:supra_tree.JumpToSibling(-1)<cr>
+		# --- Configurable key mappings (override via g:supratree_mappings) ---
+		ApplyMappings()
 
 		# --- Rapid Jumps (First/Last Sibling) ---
 		nmap <buffer> J                 Pj<
 		nmap <buffer> K                 Pj
 
-		# --- File Operations (CRUD) ---
-		nnoremap <buffer> i             <scriptcmd>b:supra_tree.OnRename()<cr>
-		nnoremap <buffer> o             <scriptcmd>b:supra_tree.OnNewFile(false)<cr>
-		nnoremap <buffer> O             <scriptcmd>b:supra_tree.OnNewFile(true)<cr>
-		nnoremap <buffer> dd            <scriptcmd>b:supra_tree.OnRemove(false)<cr>
+		# --- Visual-mode operations (enter visual with V) ---
 		vnoremap <buffer> d             <esc><scriptcmd>b:supra_tree.OnRemove(true)<cr>
-
-		# --- Clipboard & System ---
-		nnoremap <buffer> yy            <scriptcmd>b:supra_tree.OnYank(false)<cr>
 		vnoremap <buffer> y             <esc><scriptcmd>b:supra_tree.OnYank(true)<cr>
-		nnoremap <buffer> p             <scriptcmd>b:supra_tree.OnPaste()<cr>
-		nnoremap <buffer> <c-s>         <scriptcmd>b:supra_tree.SaveActions()<cr>
-		nnoremap <buffer> r             <scriptcmd>b:supra_tree.RefreshFileSystem()<cr>
 
 		# --- Mouse Support ---
 		nnoremap <buffer> <2-LeftMouse>  <scriptcmd>b:supra_tree.OnClick(Toggle.Enter)<cr>
