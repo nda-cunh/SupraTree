@@ -1,0 +1,299 @@
+*supratree.txt*	A modal, editable file explorer for Vim — edit files like text
+
+			      ____                        _____
+			     / ___| _   _ _ __  _ __ __ _|_   _| __ ___  ___
+			     \___ \| | | | '_ \| '__/ _` | | || '__/ _ \/ _ \
+			      ___) | |_| | |_) | | | (_| | | || | |  __/  __/
+			     |____/ \__,_| .__/|_|  \__,_| |_||_|  \___|\___|
+					 |_|
+
+			 SupraTree — manipulate files like you edit text
+
+==============================================================================
+CONTENTS						*supratree-contents*
+
+	1. Introduction ................... |supratree-introduction|
+	2. Requirements ................... |supratree-requirements|
+	3. Installation ................... |supratree-installation|
+	4. Commands ....................... |supratree-commands|
+	5. Toggle mapping ................. |supratree-toggle|
+	6. Tree buffer mappings ........... |supratree-mappings|
+	7. Editing workflow ............... |supratree-workflow|
+	8. Custom key mappings ............ |supratree-custom-mappings|
+	9. Settings ....................... |supratree-settings|
+	   9.1 Behavior & layout .......... |supratree-settings-behavior|
+	   9.2 Filtering & visibility ..... |supratree-settings-filter|
+	   9.3 Icons & palette ............ |supratree-settings-icons|
+	   9.4 Design & colors ............ |supratree-settings-colors|
+	10. Highlight groups .............. |supratree-highlights|
+	11. About ......................... |supratree-about|
+
+==============================================================================
+1. INTRODUCTION					*supratree-introduction* *supratree*
+
+SupraTree is a file explorer built around one idea: manipulating files should
+feel exactly like editing text. Instead of dialogs and prompts, you stage a
+batch of changes — renames, new files, deletions, copies — directly in the
+tree buffer, review them, and apply them all at once with |:w|.
+
+The tree lives in a normal, modal Vim buffer, so your usual motions work.
+Pending changes are highlighted so you can double-check before committing them
+to disk.
+
+==============================================================================
+2. REQUIREMENTS					*supratree-requirements*
+
+- Vim with |+patch-9.1.0850| or newer (the |vim9script| class features it
+  relies on).
+
+Optional, but recommended:
+
+- An icon glyph provider (see |supratree-settings-icons|).
+- The SupraPopup plugin, used for nicer input popups when available
+  (see |g:supratree_use_suprapopup|).
+- The supraconfig plugin, which exposes SupraTree's settings in a config UI.
+
+==============================================================================
+3. INSTALLATION					*supratree-installation*
+
+Use your plugin manager of choice. With Vim's built-in package support: >
+
+	git clone https://github.com/nda-cunh/SupraTree.git \
+		~/.vim/pack/plugins/start/SupraTree
+<
+Then generate the help tags so |:help| can find this file: >
+
+	:helptags ALL
+<
+==============================================================================
+4. COMMANDS					*supratree-commands*
+
+						*:SupraTreeToggle*
+:SupraTreeToggle	Open the tree if it is closed, close it otherwise.
+
+						*:SupraTreeOpen*
+:SupraTreeOpen		Open the tree window.
+
+						*:SupraTreeClose*
+:SupraTreeClose		Close the tree window.
+
+						*:SupraTreeRefresh*
+:SupraTreeRefresh	Re-read the file system and refresh the tree, keeping
+			the current expansion and cursor position.
+
+						*:SupraTreeChangeDir* *:SupraTreeCD*
+:SupraTreeChangeDir {path}
+:SupraTreeCD {path}	Change the tree root to {path}. Completion of
+			directories is provided.
+
+==============================================================================
+5. TOGGLE MAPPING				*supratree-toggle*
+
+						*<Plug>(SupraTreeToggle)*
+SupraTree defines a single |<Plug>| mapping to open and close the tree. By
+default it is bound to CTRL-G in Normal and Insert mode, unless you already
+mapped |<Plug>(SupraTreeToggle)| yourself.
+
+To rebind it, for example to <F2>: >
+
+	nmap <F2> <Plug>(SupraTreeToggle)
+	imap <F2> <Plug>(SupraTreeToggle)
+<
+==============================================================================
+6. TREE BUFFER MAPPINGS				*supratree-mappings*
+
+These keys are active inside the tree buffer. All of them are configurable,
+see |supratree-custom-mappings|.
+
+Navigation~
+						*supratree-navigation*
+	<CR>		Open the file / expand or collapse the folder
+	t   <C-t>	Open the file in a new tab
+	s   <C-h>	Open the file in a horizontal split
+	v   <C-v>	Open the file in a vertical split
+	W		Close all open directories
+	-   <BS>	Move up to the parent directory (change root)
+	P		Jump to the parent folder
+	>   }		Jump to the next sibling
+	<   {		Jump to the previous sibling
+	J		Fast jump to the last child
+	K		Fast jump to the first child
+
+Note: because "v" opens a vertical split, enter Visual mode with "V"
+(linewise) when you want to select several rows for "d" or "y".
+
+Editing (CRUD)~
+						*supratree-crud*
+	i		Rename the node under the cursor
+	o		New file below the cursor (end the name with "/"
+			to create a directory)
+	O		New file above the cursor
+	dd		Mark the node for deletion
+	d		(Visual) mark the selected nodes for deletion
+	yy		Add the node to the SupraTree clipboard
+	y		(Visual) add the selected nodes to the clipboard
+	p		Paste clipboard files into the selected folder
+	<C-s>		Apply all pending changes to disk (same as |:w|)
+	r		Refresh the tree from disk and VCS
+
+==============================================================================
+7. EDITING WORKFLOW				*supratree-workflow*
+
+SupraTree does not touch the disk as you type. Renames, new files, deletions
+and copies are staged as pending changes and highlighted in the tree
+(see |supratree-highlights|). Nothing is written until you save.
+
+To apply the staged changes, press <C-s> or run |:w| in the tree buffer. If
+several changes are pending, a confirmation popup lists them all before they
+are applied.
+
+Inside the rename / new-file popup:
+
+	<Enter>		Confirm the name.
+	<C-s>		Confirm the name AND save to disk right away. If that
+			name is the only pending change it is applied without
+			asking; otherwise the usual confirmation popup appears.
+
+==============================================================================
+8. CUSTOM KEY MAPPINGS				*supratree-custom-mappings*
+
+						*g:supratree_mappings*
+The in-tree keys are configurable through the |Dictionary|
+`g:supratree_mappings`. Each entry maps an action name to a key, or to a
+|List| of keys, so several keys can trigger the same action. An empty string
+(or empty list) disables the action. Only the actions you list are
+overridden; every other action keeps its default. >
+
+	g:supratree_mappings = {
+	    'open_split':  ['s', "\<C-h>"],   # multiple keys at once
+	    'open_vsplit': ['v', "\<C-v>"],
+	    'open_tab':    ['t', "\<C-t>"],
+	    'refresh':     'R',                # a single key
+	    'yank':        '',                 # disable an action
+	}
+<
+Available actions and their default keys:
+
+	Action			Default keys	Description~
+	open_edit		<CR>		Open file / expand folder
+	open_tab		t, <C-t>	Open in a new tab
+	open_split		s, <C-h>	Open in a horizontal split
+	open_vsplit		v, <C-v>	Open in a vertical split
+	close_all		W		Close all open directories
+	back			-, <BS>		Move up to the parent directory
+	jump_parent		P		Jump to the parent folder
+	next_sibling		>, }		Jump to the next sibling
+	prev_sibling		<, {		Jump to the previous sibling
+	rename			i		Rename the node under the cursor
+	new_file		o		New file below the cursor
+	new_file_above		O		New file above the cursor
+	remove			dd		Mark the node for deletion
+	yank			yy		Add to the SupraTree clipboard
+	paste			p		Paste files into the folder
+	save			<C-s>		Apply pending changes to disk
+	refresh			r		Sync the tree with disk and VCS
+
+The Visual-mode "d" and "y", the "J"/"K" quick jumps, and the mouse bindings
+are not part of this dictionary.
+
+==============================================================================
+9. SETTINGS					*supratree-settings*
+
+Set these global variables in your |vimrc|. If the supraconfig plugin is
+installed, most of them are also exposed in its configuration UI.
+
+------------------------------------------------------------------------------
+9.1 Behavior & layout				*supratree-settings-behavior*
+
+						*g:supratree_open_on_startup*
+	Automatically open the tree on Vim launch.
+	Default: v:false >
+		g:supratree_open_on_startup = true
+<
+						*g:supratree_focus_on_open*
+	Focus the tree window when it is opened on startup.
+	Default: v:true
+
+						*g:supratree_position*
+	Window position, "left" or "right".
+	Default: "left"
+
+						*g:supratree_width*
+	Width of the tree window in columns.
+	Default: 26
+
+						*g:supratree_sortascending*
+	Sort files in ascending alphabetical order.
+	Default: v:true
+
+						*g:supratree_sync_with_cd*
+	Keep the tree in sync with Vim's current working directory.
+	Default: v:true
+
+------------------------------------------------------------------------------
+9.2 Filtering & visibility			*supratree-settings-filter*
+
+						*g:supratree_filter_files*
+	|List| of file glob patterns to hide from the tree.
+	Default: ['*.o', '*.class', ...]
+
+						*g:supratree_show_hidden*
+	Show hidden files (names starting with ".").
+	Default: v:false
+
+------------------------------------------------------------------------------
+9.3 Icons & palette				*supratree-settings-icons*
+
+						*g:supratree_icons_glyph_func*
+	Name of a function that returns the icon glyph for a path, for
+	example "WebDevIconsGetFileTypeSymbol". Leave unset for no icons.
+
+					*g:supratree_icons_glyph_palette_func*
+	Name of a function that applies colors to icons, for example
+	"SupraIcons#Palette#Apply".
+
+						*g:supratree_use_suprapopup*
+	Use the SupraPopup plugin for input popups when it is installed.
+
+------------------------------------------------------------------------------
+9.4 Design & colors				*supratree-settings-colors*
+
+						*g:supratree_darken_amount*
+	Intensity of the tree column dimming, from 0 to 255.
+	Default: 18
+
+						*g:supratree_force_color*
+	Force a specific hex background color for the tree, e.g. "#adedb8".
+	Default: "" (derive it from the current colorscheme)
+
+==============================================================================
+10. HIGHLIGHT GROUPS				*supratree-highlights*
+
+Pending changes and VCS status are shown with dedicated highlight groups you
+can override in your colorscheme.
+
+	SupraTreeNewFile	Staged new file
+	SupraTreeDeleted	Staged deletion
+	SupraTreeRenamed	Staged rename
+	SupraTreeCopy		Staged copy
+
+	SupraTreeGitAdded	Added file (VCS)
+	SupraTreeGitModified	Modified file (VCS)
+	SupraTreeGitDeleted	Deleted file (VCS)
+	SupraTreeGitRenamed	Renamed file (VCS)
+
+	TreeNormalDark		Dimmed background of the tree window
+
+==============================================================================
+11. ABOUT					*supratree-about*
+
+SupraTree is developed by nda-cunh.
+
+	Repository:	https://github.com/nda-cunh/SupraTree
+
+Because manipulating files shouldn't be any different from manipulating text.
+Stage your project structure, double-check the colors to avoid mistakes,
+and |:w|. That's it.
+
+==============================================================================
+vim:tw=78:ts=8:noet:ft=help:norl:
