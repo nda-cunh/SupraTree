@@ -90,7 +90,7 @@ imap <F2> <Plug>(SupraTreeToggle)
 ## 🔧 Settings
 
 ### Behavior & Layout
-- `g:supratree_open_on_startup` (Default: `true`): Automatically opens the tree on Vim launch.
+- `g:supratree_open_on_startup` (Default: `false`): Automatically opens the tree on Vim launch.
 - `g:supratree_focus_on_open` (Default: `true`): Focus the tree window when opened.
 - `g:supratree_position` (Default: `'left'`): Window position (`'left'` or `'right'`).
 - `g:supratree_width` (Default: `26`): Tree window width.
