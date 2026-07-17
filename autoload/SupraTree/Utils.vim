@@ -40,3 +40,11 @@ export def IsLeft(winid: number): bool
 	const pos = win_screenpos(winid)
 	return pos[1] == 1
 enddef
+
+# Report an achievement metric, if the host provides the handler.
+# No-op when g:SupraAchMetric is not defined.
+export def Metric(name: string, value: number = 1)
+	if exists('*g:SupraAchMetric')
+		call g:SupraAchMetric(name, value)
+	endif
+enddef

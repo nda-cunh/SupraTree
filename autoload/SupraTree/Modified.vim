@@ -213,8 +213,8 @@ class NewFileObject extends NewObject
 			mkdir(dir_path, 'p')
 		endif
 		var ok = writefile([], this.path) == 0
-		if ok && exists('*g:SupraAchMetric')
-			call g:SupraAchMetric('supratree_create', 1)
+		if ok
+			Utils.Metric('supratree_create', 1)
 		endif
 		return ok
 	enddef
