@@ -2,6 +2,33 @@ vim9script
 
 import autoload './Utils.vim' as Utils
 
+# Native recursive directory copy (no shell, injection-safe and cross-platform).
+# Preserves file permissions to keep the `cp -p` semantics.
+def CopyTree(src: string, dst: string): bool
+	if !isdirectory(dst)
+		mkdir(dst, 'p')
+	endif
+	for entry in readdirex(src)
+		const from = src .. '/' .. entry.name
+		const to = dst .. '/' .. entry.name
+		if entry.type == 'dir' || entry.type == 'linkd'
+			if !CopyTree(from, to)
+				return false
+			endif
+		else
+			const data = readfile(from, 'b')
+			if writefile(data, to, 'b') != 0
+				return false
+			endif
+		endif
+		const perm = getfperm(from)
+		if perm != ''
+			setfperm(to, perm)
+		endif
+	endfor
+	return true
+enddef
+
 ####################################
 #   Abstract Classes for Modified  #
 ####################################
@@ -166,16 +193,7 @@ class CopiedDirectoryObject extends CopiedObject
 			mkdir(dest_parent, 'p')
 		endif
 
-		var cmd: string
-		if has('win32')
-			cmd = $'xcopy "{this.original_path}" "{this.new_path}" /E /I /H /Y'
-		else
-			cmd = $'cp -rp "{this.original_path}" "{this.new_path}"'
-		endif
-
-		system(cmd)
-
-		return v:shell_error == 0
+		return CopyTree(this.original_path, this.new_path)
 	enddef
 endclass
 
