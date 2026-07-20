@@ -70,16 +70,27 @@ export abstract class Node
 	enddef
 
 	def AddPropAttribute()
-		var singleton: any = g:supra_tree 
-		if this.type == NodeType.Deleted
-			prop_add(singleton.lnum - 1, 1, {type: 'SupraTreeDeletedProp', length: len(getline(singleton.lnum - 1)), bufnr: singleton.buf})
-		elseif this.type == NodeType.NewFile
-			prop_add(singleton.lnum - 1, 1, {type: 'SupraTreeNewFileProp', length: len(getline(singleton.lnum - 1)), bufnr: singleton.buf})
-		elseif this.type == NodeType.Renamed
-			prop_add(singleton.lnum - 1, 1, {type: 'SupraTreeRenamedProp', length: len(getline(singleton.lnum - 1)), bufnr: singleton.buf})
-		elseif this.type == NodeType.Copy
-			prop_add(singleton.lnum - 1, 1, {type: 'SupraTreeCopyProp', length: len(getline(singleton.lnum - 1)), bufnr: singleton.buf})
+		if this.type == NodeType.SimpleFile
+			return
 		endif
+		var prop_name: string
+		if this.type == NodeType.Deleted
+			prop_name = 'SupraTreeDeletedProp'
+		elseif this.type == NodeType.NewFile
+			prop_name = 'SupraTreeNewFileProp'
+		elseif this.type == NodeType.Renamed
+			prop_name = 'SupraTreeRenamedProp'
+		elseif this.type == NodeType.Copy
+			prop_name = 'SupraTreeCopyProp'
+		else
+			return
+		endif
+		var singleton: any = g:supra_tree
+		add(singleton.pending_props, {
+			lnum: singleton.lnum - 1,
+			type: prop_name,
+			length: len(singleton.pending_lines[-1]),
+		})
 	enddef
 
 	def GetFullPath(): string

@@ -95,6 +95,10 @@ export class SupraTreeBuffer
 	var table_actions: list<Node>
 	var clipboard: list<Node> = []
 	var hashtable: dict<Node> = {}
+	# A redraw builds every line in memory first, then writes the buffer once:
+	# a setbufline() per node is what dominates the cost otherwise.
+	var pending_lines: list<string> = []
+	var pending_props: list<dict<any>> = []
 
 	def new(target_file: string)
 		const buf = bufadd('SupraTree')
@@ -243,12 +247,10 @@ export class SupraTreeBuffer
 
 	def Refresh()
 		setbufvar(this.buf, '&modifiable', 1)
-		# clear the buffer
-		call setbufline(this.buf, 1, [])
-		call deletebufline(this.buf, 1, '$')
 		this.DrawHeader(this.general_node.GetFullPath())
-		# this.general_node.DrawChilds()
 		this.general_node.DrawChilds()
+		# The buffer is only cleared here, so it never sits empty while drawing.
+		this.FlushLines()
 
 		this.RefreshPalette()
 
@@ -488,6 +490,8 @@ export class SupraTreeBuffer
 		const path = fnamemodify(pwd, ':~')
 		this.lnum = 1
 		this.table_actions = []
+		this.pending_lines = []
+		this.pending_props = []
 
 		this.NewAddLine(path, SpecialNodeCD.new())
 		this.NewAddLine('', SpecialNode.new('null'))
@@ -495,10 +499,21 @@ export class SupraTreeBuffer
 	enddef
 
 	def NewAddLine(line: string, node: Node)
-		setbufline(this.buf, this.lnum, line)
+		add(this.pending_lines, line)
 		add(this.table_actions, node)
 		node.SetLineNumber(this.lnum)
 		this.lnum += 1
+	enddef
+
+	# Write everything Draw() accumulated.
+	def FlushLines()
+		deletebufline(this.buf, 1, '$')
+		setbufline(this.buf, 1, this.pending_lines)
+		for p in this.pending_props
+			prop_add(p.lnum, 1, {type: p.type, length: p.length, bufnr: this.buf})
+		endfor
+		this.pending_lines = []
+		this.pending_props = []
 	enddef
 
 	######################################

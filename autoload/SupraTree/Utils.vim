@@ -1,13 +1,28 @@
 vim9script
 
+var icon_cache: dict<string> = {}
+
+export def ClearIconCache()
+	icon_cache = {}
+enddef
+
 export def GetIcons(path: string, is_directory: number = 0): string
-	# TODO: Check a global variable for test if the icon function work
 	if is_directory == 0
+		if has_key(icon_cache, path)
+			return icon_cache[path]
+		endif
+		var icon: string
 		try
-			return call(g:supratree_icons_glyph_func, [path])
+			icon = call(g:supratree_icons_glyph_func, [path])
 		catch
-			return ''
+			icon = ''
 		endtry
+		# Browsing a large project should not grow this without bound.
+		if len(icon_cache) > 8192
+			icon_cache = {}
+		endif
+		icon_cache[path] = icon
+		return icon
 	elseif is_directory == 1
 		return '󰉋'
 	elseif is_directory == 2
