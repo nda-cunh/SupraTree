@@ -24,6 +24,8 @@ type DirectoryNode = ADirectoryNode.DirectoryNode
 type FileNode = AFileNode.FileNode
 type Modified = AModified.Modified
 
+const has_git: bool = executable('git') == 1
+const has_svn: bool = executable('svn') == 1
 
 # Each action maps to the normal-mode command it triggers. Users rebind the
 # keys through g:supratree_mappings; a value can be a single key or a list of
@@ -272,7 +274,7 @@ export class SupraTreeBuffer
 	enddef
 
 	def SvnRefresh()
-		if this.hashtable == {}
+		if this.hashtable == {} || !has_svn
 			return
 		endif
 
@@ -297,7 +299,7 @@ export class SupraTreeBuffer
 
 
 	def GitRefresh()
-		if this.hashtable == {}
+		if this.hashtable == {} || !has_git
 			return
 		endif
 
