@@ -41,7 +41,9 @@ supraconfig#RegisterMany([
 		lore: 'Default width of the explorer window',
 		handler: (v) => {
 			g:supratree_width = v
-			Tree.Resize()
+			if exists('t:supratree_winid')
+				Tree.Resize()
+			endif
 		}
 	},
 	{
@@ -69,7 +71,9 @@ supraconfig#RegisterMany([
 		lore: 'Percentage to darken the explorer background',
 		handler: (v: number) => {
 			g:supratree_darken_amount = v
-			Darken.Create_HiColor()
+			if exists('t:supratree_winid')
+				Darken.Create_HiColor()
+			endif
 		}
 	},
 	{
@@ -89,7 +93,9 @@ supraconfig#RegisterMany([
 		lore: 'Position of the explorer window (left or right)',
 		handler: (v) => {
 			g:supratree_position = v
-			Tree.Move()
+			if exists('t:supratree_winid')
+				Tree.Move()
+			endif
 		}
 	},
 	{
