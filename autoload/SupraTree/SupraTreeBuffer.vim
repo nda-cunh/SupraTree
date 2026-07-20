@@ -93,7 +93,6 @@ export class SupraTreeBuffer
 	var open_folders = [] # Contains the list of open folders
 	var lnum: number # Current line number to write
 	var table_actions: list<Node>
-	var icon_work: bool
 	var clipboard: list<Node> = []
 	var hashtable: dict<Node> = {}
 
@@ -487,7 +486,6 @@ export class SupraTreeBuffer
 	# draw the tree header
 	def DrawHeader(pwd: string)
 		const path = fnamemodify(pwd, ':~')
-		this.icon_work = Utils.TestIfIconsWork()
 		this.lnum = 1
 		this.table_actions = []
 
