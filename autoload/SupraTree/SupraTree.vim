@@ -28,7 +28,11 @@ export def FocusTree()
 		SupraTree#SupraTree#OpenTree()
 	endif
 	if exists('t:supratree_winid')
-		win_gotoid(t:supratree_winid)
+		if win_getid() == t:supratree_winid
+			wincmd p
+		else
+			win_gotoid(t:supratree_winid)
+		endif
 	endif
 enddef
 
