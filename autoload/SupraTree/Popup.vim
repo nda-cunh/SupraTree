@@ -11,6 +11,7 @@ export abstract class Popup
 			highlight: 'Normal',
 			padding: [0, 1, 0, 1],
 			mapping: 0,
+			zindex: 6767,
 			filter: this.Filter,
 		}
 
