@@ -41,6 +41,7 @@ Plug 'nda-cunh/SupraTree.vim'
 `:SupraTreeOpen`      # Opens the tree in a new window
 `:SupraTreeClose`     # Closes the tree window
 `:SupraTreeToggle`    # Opens or closes the tree depending on its state
+`:SupraTreeFocus`     # Jumps the cursor to the tree window (opens it if needed)
 `:SupraTreeRefresh`   # Syncs the tree with the file system
 `:SupraTreeChangeDir` # Changes Vim's current working directory to the tree's root
 `:SupraTreeCD`        # alias for SupraTreeChangeDir

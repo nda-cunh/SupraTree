@@ -77,6 +77,10 @@ Then generate the help tags so |:help| can find this file: >
 						*:SupraTreeClose*
 :SupraTreeClose		Close the tree window.
 
+						*:SupraTreeFocus*
+:SupraTreeFocus		Move the cursor to the tree window, opening the tree
+			first if it is closed.
+
 						*:SupraTreeRefresh*
 :SupraTreeRefresh	Re-read the file system and refresh the tree, keeping
 			the current expansion and cursor position.

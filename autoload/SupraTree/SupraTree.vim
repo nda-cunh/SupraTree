@@ -23,6 +23,15 @@ export def ToggleTree()
 	endif
 enddef
 
+export def FocusTree()
+	if !exists('t:supratree_winid')
+		SupraTree#SupraTree#OpenTree()
+	endif
+	if exists('t:supratree_winid')
+		win_gotoid(t:supratree_winid)
+	endif
+enddef
+
 export def SupraTreeComplete(ArgLead: string, CmdLine: string, CursorPos: number): list<string>
 	const tree: SupraTreeBuffer = g:supra_tree
 

@@ -39,6 +39,7 @@ command! SupraTreeToggle  Tree.ToggleTree()
 command! SupraTreeOpen    Tree.OpenTree()
 command! SupraTreeClose   Tree.CloseTree()
 command! SupraTreeRefresh Tree.RefreshTree()
+command! SupraTreeFocus   Tree.FocusTree()
 command! -nargs=1 -complete=customlist,Tree.SupraTreeComplete SupraTreeChangeDir Tree.ChangeDirectory(<f-args>)
 command! -nargs=1 -complete=customlist,Tree.SupraTreeComplete SupraTreeCD        Tree.ChangeDirectory(<f-args>)
 
