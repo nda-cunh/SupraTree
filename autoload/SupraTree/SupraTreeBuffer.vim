@@ -564,7 +564,7 @@ export class SupraTreeBuffer
 			var is_dir = new_name[-1] == '/'
 
 			for p in parts
-				if p !~# '\v^[a-zA-Z0-9._-]+$'
+				if p !~# '\v^[a-zA-Z0-9._ -]+$'
 					throw "Invalid name segment: " .. p
 				endif
 			endfor
