@@ -304,7 +304,7 @@ export class Modified
 	def ApplyAll()
 		this.Sort()
 		for node in this.modified_lst
-			echo node.Apply()
+			node.Apply()
 		endfor
 	enddef
 
