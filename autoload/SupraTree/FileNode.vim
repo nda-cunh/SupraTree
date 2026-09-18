@@ -50,7 +50,7 @@ export class FileNode extends Node.Node
 
 		wincmd p
 		const buf = bufnr('%')
-		const full_path = this.GetFullPath()
+		const full_path = fnameescape(this.GetFullPath())
 		if type == Toggle.Enter
 			if getbufvar(buf, '&modified') == true
 				execute 'split ' .. full_path

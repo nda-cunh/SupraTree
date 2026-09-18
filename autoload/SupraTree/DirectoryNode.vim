@@ -61,7 +61,7 @@ export class DirectoryNode extends Node
 		var target = simplify(target_path)
 
 		for child in this.children
-			var child_path = simplify(child.GetFullPath())
+			var child_path = child.GetFullPath()
 			var len_child = len(child_path)
 
 			if stridx(target, child_path) == 0
@@ -246,7 +246,7 @@ export class DirectoryNode extends Node
 			endif
 		endif
 		if type == Toggle.NewTab
-			execute 'tabnew ' .. this.GetFullPath()
+			execute 'tabnew ' .. fnameescape(this.GetFullPath())
 		else
 			if this.is_open == false
 				this.Open()
