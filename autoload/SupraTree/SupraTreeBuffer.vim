@@ -376,6 +376,10 @@ export class SupraTreeBuffer
 	# typed it in, listing that single action back to them buys nothing.
 	def SaveActions(skip_confirm: bool = false)
 		try
+		const duplicate_err = this.general_node.CheckDuplicates()
+		if !empty(duplicate_err)
+			throw duplicate_err
+		endif
 		var modified = Modified.new()
 
 		this.general_node.GetAllSaveActions(modified)
@@ -383,6 +387,11 @@ export class SupraTreeBuffer
 		if modified.IsEmpty() == true
 			throw "SupraTree: No changes to save."
 		endif
+
+		var problems = modified.DetectRenameCycles()
+		# if !empty(problems)
+			# throw "SupraTree: impossible de sauvegarder :\n" .. join(problems, "\n")
+		# endif
 
 		if skip_confirm == true && modified.Count() == 1
 			modified.ApplyAll()
@@ -616,6 +625,7 @@ export class SupraTreeBuffer
 			this.GoToPath(final_node.GetFullPath())
 		}
 
+		# TODO add a try/catch for validate function
 		input.AddCbEnter(Validate)
 		input.AddCbKey("\<C-s>", (new_name) => {
 			Validate(new_name)

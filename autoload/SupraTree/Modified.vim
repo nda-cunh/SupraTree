@@ -2,6 +2,17 @@ vim9script
 
 import autoload './Utils.vim' as Utils
 
+const WEIGHTS: dict<number> = {
+	copied_file: 1,
+	copied_directory: 2,
+	renamed_file: 3,
+	renamed_directory: 4,
+	deleted_file: 5,
+	deleted_directory: 6,
+	new_directory: 7,
+	new_file: 8,
+}
+
 # Native recursive directory copy (no shell, injection-safe and cross-platform).
 # Preserves file permissions to keep the `cp -p` semantics.
 def CopyTree(src: string, dst: string): bool
@@ -36,15 +47,27 @@ enddef
 abstract class BaseObject
 	abstract def ToString(): string
 	abstract def GetWeight(): number
-	abstract def Apply(): bool 
+	abstract def Apply(): bool
+	# The single path this operation ultimately affects/produces, regardless
+	# of its concrete type. Lets generic code (conflict/cycle detection)
+	# reason about "where does this node end up" without an instanceof chain.
+	# For a deletion this is the path being removed, not a "new" path -- the
+	# name is kept generic on purpose so every subclass can share it.
+	abstract def TargetPath(): string
 endclass
 
 abstract class NewObject extends BaseObject
 	var path: string
+	def TargetPath(): string
+		return this.path
+	enddef
 endclass
 
 abstract class DeletedObject extends BaseObject
 	var path: string
+	def TargetPath(): string
+		return this.path
+	enddef
 endclass
 
 abstract class RenamedObject extends BaseObject
@@ -56,6 +79,10 @@ abstract class RenamedObject extends BaseObject
 		const icon_2 = Utils.GetIcons(this.new_path)
 
 		return "[Rename]       " .. icon_1 .. ' ' .. this.original_path .. ' → ' .. icon_2 .. ' ' .. this.new_path
+	enddef
+
+	def TargetPath(): string
+		return this.new_path
 	enddef
 
 	def Apply(): bool
@@ -71,6 +98,10 @@ endclass
 abstract class CopiedObject extends BaseObject
 	var original_path: string
 	var new_path: string
+
+	def TargetPath(): string
+		return this.new_path
+	enddef
 endclass
 
 
@@ -93,7 +124,7 @@ class DeletedFileObject extends DeletedObject
 	enddef
 
 	def GetWeight(): number
-		return 7
+		return WEIGHTS.deleted_file
 	enddef
 endclass
 
@@ -103,7 +134,7 @@ class DeletedDirectoryObject extends DeletedObject
 	enddef
 
 	def GetWeight(): number
-		return 8
+		return WEIGHTS.deleted_directory
 	enddef
 
 	def Apply(): bool
@@ -122,7 +153,7 @@ class RenamedFileObject extends RenamedObject
 	enddef
 
 	def GetWeight(): number
-		return 5
+		return WEIGHTS.renamed_file
 	enddef
 endclass
 
@@ -132,7 +163,7 @@ class RenamedDirectoryObject extends RenamedObject
 	enddef
 
 	def GetWeight(): number
-		return 6
+		return WEIGHTS.renamed_directory
 	enddef
 endclass
 
@@ -145,7 +176,7 @@ class CopiedFileObject extends CopiedObject
 	enddef
 
 	def GetWeight(): number
-		return 4
+		return WEIGHTS.copied_file
 	enddef
 
 	def ToString(): string
@@ -176,7 +207,7 @@ class CopiedDirectoryObject extends CopiedObject
 	enddef
 
 	def GetWeight(): number
-		return 3
+		return WEIGHTS.copied_directory
 	enddef
 
 	def ToString(): string
@@ -204,7 +235,7 @@ class NewFileObject extends NewObject
 	enddef
 
 	def GetWeight(): number
-		return 2
+		return WEIGHTS.new_file
 	enddef
 
 	def Apply(): bool
@@ -232,7 +263,7 @@ class NewDirectoryObject extends NewObject
 	enddef
 
 	def GetWeight(): number
-		return 1
+		return WEIGHTS.new_directory
 	enddef
 
 	def Apply(): bool
@@ -243,9 +274,6 @@ class NewDirectoryObject extends NewObject
 		return '[New Dir]      ' .. Utils.GetIcons(this.path, 2) .. ' ' .. this.path
 	enddef
 endclass
-
-
-
 
 
 export class Modified
@@ -301,11 +329,19 @@ export class Modified
 		add(this.opened_dirs, simplify(path))
 	enddef
 
-	def ApplyAll()
+	# Applies every staged operation and returns the list of failures (empty
+	# list = all good). Never throws: a partial failure still needs the
+	# caller to refresh the tree and show what actually happened, so we
+	# collect problems instead of raising on the first one.
+	def ApplyAll(): list<string>
 		this.Sort()
+		var errors: list<string> = []
 		for node in this.modified_lst
-			node.Apply()
+			if !node.Apply()
+				errors->add('Échec : ' .. node.ToString())
+			endif
 		endfor
+		return errors
 	enddef
 
 	def IsEmpty(): bool
@@ -326,4 +362,70 @@ export class Modified
 		return lst
 	enddef
 
+	# Two staged operations that both end up targeting the same path (e.g. a
+	# rename and a new-file landing on the same name, or two copies into the
+	# same destination) would silently overwrite one another during Apply().
+	# Caught here so SaveActions() can refuse to save instead.
+	def DetectConflicts(): list<string>
+		var targets: dict<string> = {}   # final path -> description of the op that claimed it
+		var errors: list<string> = []
+
+		this.Sort()
+		for node in this.modified_lst
+			const dest = node.TargetPath()
+			if has_key(targets, dest)
+				errors->add($"Conflit : '{targets[dest]}' et '{node.ToString()}' ciblent le même chemin : {dest}")
+			else
+				targets[dest] = node.ToString()
+			endif
+		endfor
+
+		return errors
+	enddef
+
+	# A rename cycle (a -> b, b -> a; or a -> b -> c -> a) corrupts data if
+	# applied sequentially: rename() silently overwrites its destination if
+	# one already exists, so the first step in the cycle destroys a file
+	# that a later step still needed to move. Rather than resolving this
+	# automatically (temp-file juggling has too many silent edge cases for
+	# the benefit), we detect it and block the save with a clear message.
+	def DetectRenameCycles(): list<string>
+		var src_to_dst: dict<string> = {}
+		for node in this.modified_lst
+			if node->instanceof(RenamedObject)
+				src_to_dst[node.original_path] = node.TargetPath()
+			endif
+		endfor
+
+		var errors: list<string> = []
+		var seen: dict<bool> = {}
+
+		for start in keys(src_to_dst)
+			if get(seen, start, false) | continue | endif
+
+			var chain = [start]
+			var cur = src_to_dst[start]
+			while has_key(src_to_dst, cur) && index(chain, cur) == -1
+				chain->add(cur)
+				cur = src_to_dst[cur]
+			endwhile
+
+			for p in chain
+				seen[p] = true
+			endfor
+
+			if cur == start && len(chain) > 1
+				errors->add("Cycle de renommage détecté : " .. join(chain, ' → ') .. ' → ' .. chain[0]
+					.. ". Sauvegardez ces changements en deux fois (renommez d'abord vers un nom temporaire).")
+			endif
+		endfor
+
+		return errors
+	enddef
+
+	# Convenience for SaveActions(): everything that must block a save,
+	# combined in one call.
+	def Validate(): list<string>
+		return this.DetectConflicts() + this.DetectRenameCycles()
+	enddef
 endclass

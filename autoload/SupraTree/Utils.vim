@@ -51,3 +51,10 @@ export def Metric(name: string, value: number = 1)
 		call g:SupraAchMetric(name, value)
 	endif
 enddef
+
+
+export def PrintError(msg: string)
+	echohl ErrorMsg
+	echo msg
+	echohl None
+	enddef

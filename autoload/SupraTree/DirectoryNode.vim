@@ -152,6 +152,33 @@ export class DirectoryNode extends Node
 		endfor
 	enddef
 
+	def CheckDuplicates(): string
+		var seen_names: dict<bool> = {}
+
+		for child in this.children
+			# Les éléments marqués comme supprimés ne causent pas de collision visuelle
+			if child.type == NodeType.Deleted
+				continue
+			endif
+
+			if has_key(seen_names, child.name)
+				return "Duplicate entry '" .. child.name .. "' found in directory '" .. this.GetFullPath() .. "'"
+			endif
+			seen_names[child.name] = true
+
+			# Descente récursive si c'est un sous-dossier
+			if child->instanceof(DirectoryNode)
+				var dir_child = <DirectoryNode>child
+				var err = dir_child.CheckDuplicates()
+				if !empty(err)
+					return err
+				endif
+			endif
+		endfor
+
+		return ""
+	enddef
+
 	def RemoveChild(child_to_remove: Node)
 		for i in range(len(this.children))
 			const it = this.children[i]
