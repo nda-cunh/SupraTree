@@ -87,10 +87,10 @@ supraconfig#RegisterMany([
 	},
 	{
 		id: 'supratree/position',
-		type: 'string',
-		options: ['left', 'right'],
+		type: 'choice',
+		choice: ['left', 'right'],
 		default: 'left',
-		lore: 'Position of the explorer window (left or right)',
+		lore: 'Position of the explorer window',
 		handler: (v) => {
 			g:supratree_position = v
 			if exists('t:supratree_winid')
